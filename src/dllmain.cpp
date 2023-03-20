@@ -191,6 +191,21 @@ void __declspec(naked) BattleCursor_CC()
     }
 }
 
+// HUDTooltips Hook
+DWORD64 HUDTooltipsReturnJMP;
+void __declspec(naked) HUDTooltips_CC()
+{
+    __asm
+    {
+        cvtdq2ps xmm1, xmm1                     // Original code
+        movd xmm0, eax                          // Original code
+        cvtdq2ps xmm0, xmm0                     // Original code
+        movss xmm1, [UIOffset]
+        movss[rbx], xmm1                        // Original code
+        jmp[HUDTooltipsReturnJMP]
+    }
+}
+
 void Logging()
 {
     loguru::add_file("Octopath2Fix.log", loguru::Truncate, loguru::Verbosity_MAX);
@@ -394,7 +409,29 @@ void HUDFix()
             {
                 LOG_F(INFO, "Battle Cursor: Pattern scan failed.");
             }
-        } 
+        }
+
+        // Fix HUD tooltips being offset
+        if (bHUDCenter)
+        {
+            uint8_t* HUDTooltipsScanResult = Memory::PatternScan(baseModule, "0F 5B ?? 66 0F ?? ?? 0F 5B ?? F3 0F ?? ?? F3 0F ?? ?? ?? 40 84");
+            if (HUDTooltipsScanResult)
+            {
+                Sleep(2000);
+                DWORD64 HUDTooltipsAddress = (uintptr_t)HUDTooltipsScanResult;
+                int HUDTooltipsHookLength = Memory::GetHookLength((char*)HUDTooltipsAddress, 13);
+                HUDTooltipsReturnJMP = HUDTooltipsAddress + HUDTooltipsHookLength;
+                Memory::DetourFunction64((void*)HUDTooltipsAddress, HUDTooltips_CC, HUDTooltipsHookLength);
+
+                LOG_F(INFO, "HUD Tooltips: Hook length is %d bytes", HUDTooltipsHookLength);
+                LOG_F(INFO, "HUD Tooltips: Hook address is 0x%" PRIxPTR, (uintptr_t)HUDTooltipsAddress);
+            }
+            else if (!HUDTooltipsScanResult)
+            {
+                LOG_F(INFO, "HUD Tooltips: Pattern scan failed.");
+            }
+        }
+
     } 
 }
 
