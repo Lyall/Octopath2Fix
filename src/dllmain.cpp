@@ -101,53 +101,41 @@ void __declspec(naked) AspectFOVFix_CC()
     }
 }
 
-// --- ABSOLUTE JANK ALERT! ---
-// There is a better way of doing this, but for now this will suffice
 // CenterHUD Hook
 DWORD64 CenterHUDReturnJMP;
 float UIWidth;
 float UIOffset;
-float UI1;
-float UI2;
-float UI3;
-float UI4;
-float fZero = (float)0;
 float fOne = (float)1;
 float fTwo = (float)2;
 void __declspec(naked) CenterHUD_CC()
 {
     __asm
     {
-        // Get 16:9 HUD values
-        movd xmm15, [iCustomResY]
-        cvtdq2ps xmm15, xmm15
-        mulss xmm15, [fNativeAspect]
-        movss [UIWidth], xmm15
-        movd xmm15, [iCustomResX]
-        cvtdq2ps xmm15, xmm15
-        subss xmm15, [UIWidth]
-        divss xmm15, [fTwo]
-        movss [UIOffset], xmm15
-
-        // magic stuff
-        movd xmm14, [iCustomResX]
-        cvtdq2ps xmm14, xmm14
-        divss xmm15, xmm14
-        movss [UI1], xmm15
-        xorps xmm15, xmm15
-        movss[UI2], xmm15
-        movss xmm15, [fOne]
-        subss xmm15, [UI1]
-        movss [UI3], xmm15
-        movss xmm15, [fOne]
-        movss [UI4], xmm15
-        xorps xmm14, xmm14
-        xorps xmm15, xmm15
-
         movups xmm0, [rcx + 0x00000210]         // Original code
         mov rax, rdx                            // Original code
-        movups xmm0, [UI1]
         movups[rdx], xmm0                       // Original code
+
+        // Get 16:9 HUD values
+        movd xmm0, [iCustomResY]
+        cvtdq2ps xmm0, xmm0
+        mulss xmm0, [fNativeAspect]
+        movss[UIWidth], xmm0
+        movd xmm0, [iCustomResX]
+        cvtdq2ps xmm0, xmm0
+        subss xmm0, [UIWidth]
+        divss xmm0, [fTwo]
+        movss[UIOffset], xmm0
+
+        // Resize HUD
+        movd xmm15, [iCustomResX]
+        cvtdq2ps xmm15, xmm15
+        divss xmm0, xmm15
+        movss [rdx], xmm0
+        movss xmm0, [fOne]
+        subss xmm0, [rdx]
+        movss [rdx+0x8], xmm0
+        xorps xmm15, xmm15
+
         ret                                     // Original code
         jmp[CenterHUDReturnJMP]                 // Just in case
     }
