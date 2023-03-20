@@ -121,6 +121,20 @@ void __declspec(naked) AspectFOVFix_CC()
     }
 }
 
+// FOV Culling Hook
+DWORD64 FOVCullingReturnJMP;
+void __declspec(naked) FOVCulling_CC()
+{
+    __asm
+    {
+        movss xmm1, [fOne]                      // 90/90, there is undoubtedly a smarter way of doing this
+        movss[rdx + 0x000002E8], xmm1           // Original code
+        xor r8d, r8d                            // Original code
+        movsd xmm0, [rbp + 0x000000D0]          // Original code
+        jmp[FOVCullingReturnJMP]
+    }
+}
+
 // CenterHUD Hook
 DWORD64 CenterHUDReturnJMP;
 void __declspec(naked) CenterHUD_CC()
@@ -297,6 +311,25 @@ void AspectFOVFix()
         else if (!AspectFOVFixScanResult)
         {
             LOG_F(INFO, "Aspect Ratio/FOV: Pattern scan failed.");
+        }
+    }
+
+    if (bFOVFix)
+    {
+        uint8_t* FOVCullingScanResult = Memory::PatternScan(baseModule, "8B ?? ?? ?? ?? ?? F2 ?? ?? ?? ?? ?? 89 ?? ?? ?? 84 ?? 75 ??");
+        if (FOVCullingScanResult)
+        {
+            DWORD64 FOVCullingAddress = (uintptr_t)FOVCullingScanResult - 0x13;
+            int FOVCullingHookLength = Memory::GetHookLength((char*)FOVCullingAddress, 13);
+            FOVCullingReturnJMP = FOVCullingAddress + FOVCullingHookLength;
+            Memory::DetourFunction64((void*)FOVCullingAddress, FOVCulling_CC, FOVCullingHookLength);
+
+            LOG_F(INFO, "FOV Culling: Hook length is %d bytes", FOVCullingHookLength);
+            LOG_F(INFO, "FOV Culling: Hook address is 0x%" PRIxPTR, (uintptr_t)FOVCullingAddress);           
+        }
+        else if (!FOVCullingScanResult)
+        {
+            LOG_F(INFO, "FOV Culling: Pattern scan failed.");
         }
     }
 }

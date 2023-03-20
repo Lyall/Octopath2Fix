@@ -28,6 +28,7 @@ Please report any issues you see. (**Check the known issues list first!**)
 | Disabled pillarboxing. |
 
 ## Credits
+[Flawless Widescreen](https://www.flawlesswidescreen.org/) for the LOD fix.<br />
 [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) for ASI loading. <br />
 [inipp](https://github.com/mcmtroffaes/inipp) for ini parsing. <br />
 [Loguru](https://github.com/emilk/loguru) for logging. <br />
