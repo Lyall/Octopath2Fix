@@ -29,7 +29,7 @@ string sExeName;
 string sGameName;
 string sExePath;
 string sGameVersion;
-string sFixVer = "1.0.0";
+string sFixVer = "0.0.1";
 
 // CurrResolution Hook
 DWORD64 CurrResolutionReturnJMP;
