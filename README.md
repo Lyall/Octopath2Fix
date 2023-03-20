@@ -29,6 +29,8 @@ Please report any issues you see. (**Check the known issues list first!**)
 |:--:|
 | Mid-battle dialogue may be offset/cut-off. |
 
+- Map cursor may be offset or move incorrectly.
+
 ## Screenshots
 
 | ![ezgif-1-adaa3f0c3c](https://user-images.githubusercontent.com/695941/226225010-073a0360-98bb-4e88-bfef-bcdf3f74abae.gif) |
