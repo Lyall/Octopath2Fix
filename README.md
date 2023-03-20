@@ -4,6 +4,9 @@
 
 This is a **work-in-progress** fix for ultrawide/wider displays in Octopath Traveler 2.
 
+## Caveats
+- This fix is very much still a work in progress. **You will see bugs**.
+
 ## Features
 - Removes pillarboxing at ultrawide/wider resolutions.
 - Corrects FOV at ultrawide/wider resolutions.
