@@ -5,8 +5,8 @@
 This is a **work-in-progress** fix for pillarboxing/letterboxing in Octopath Traveler 2.
 
 ## Features
-- Removes pillarboxing/letterboxing at non 16:9 resolutions.
-- Corrects FOV at non 16:9 resolutions.
+- Removes pillarboxing at ultrawide/wider resolutions.
+- Corrects FOV at ultrawide/wider resolutions.
 - 16:9 centered HUD with fixed UI elements.
 
 ## Installation
