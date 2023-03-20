@@ -25,7 +25,7 @@ Please report any issues you see. (**Check the known issues list first!**)
 |:--:|
 | UI tooltips are offset. |
 
-| ![ezgif-1-ead1bf1c12](https://user-images.githubusercontent.com/695941/226358956-f3dac460-2066-44f6-aab4-f46648c1bb4c.gif) |
+| ![ezgif-1-f73ba9a4a5](https://user-images.githubusercontent.com/695941/226360449-f777244f-9cf5-4d5b-bac0-397d26617599.gif) |
 |:--:|
 | Mid-battle dialogue may be offset/cut-off. |
 
