@@ -11,6 +11,7 @@ inipp::Ini<char> ini;
 bool bAspectFix;
 bool bFOVFix;
 bool bHUDFix;
+bool bHUDCenter;
 int iCustomResX;
 int iCustomResY;
 int iInjectionDelay;
@@ -18,6 +19,7 @@ float fAdditionalFOV;
 int iAspectFix;
 int iFOVFix;
 int iHUDFix;
+int iHUDCenter;
 
 // Variables
 float fNewX;
@@ -25,6 +27,9 @@ float fNewY;
 float fNativeAspect = 1.777777791f;
 float fPi = 3.14159265358979323846f;
 float fNewAspect;
+float fOne = (float)1;
+float fTwo = (float)2;
+
 string sExeName;
 string sGameName;
 string sExePath;
@@ -33,6 +38,8 @@ string sFixVer = "0.0.1";
 
 // CurrResolution Hook
 DWORD64 CurrResolutionReturnJMP;
+float UIWidth;
+float UIOffset;
 void __declspec(naked) CurrResolution_CC()
 {
     __asm
@@ -43,12 +50,25 @@ void __declspec(naked) CurrResolution_CC()
         add rdi, rcx                           // Original code
         mov eax, [rdi]                         // Original code
 
+        // Get current resolution + aspect ratio
         mov[iCustomResX], r15d                 // Grab current resX
         mov[iCustomResY], r12d                 // Grab current resY
         cvtsi2ss xmm14, r15d
         cvtsi2ss xmm15, r12d
         divss xmm14, xmm15
         movss[fNewAspect], xmm14               // Grab current aspect ratio
+
+        // Get 16:9 HUD values
+        movd xmm14, [iCustomResY]
+        cvtdq2ps xmm14, xmm14
+        mulss xmm14, [fNativeAspect]
+        movss [UIWidth], xmm14
+        movd xmm14, [iCustomResX]
+        cvtdq2ps xmm14, xmm14
+        subss xmm14, [UIWidth]
+        divss xmm14, [fTwo]
+        movss[UIOffset], xmm14
+
         xorps xmm14, xmm14
         xorps xmm15, xmm15
         jmp[CurrResolutionReturnJMP]
@@ -103,10 +123,6 @@ void __declspec(naked) AspectFOVFix_CC()
 
 // CenterHUD Hook
 DWORD64 CenterHUDReturnJMP;
-float UIWidth;
-float UIOffset;
-float fOne = (float)1;
-float fTwo = (float)2;
 void __declspec(naked) CenterHUD_CC()
 {
     __asm
@@ -115,18 +131,8 @@ void __declspec(naked) CenterHUD_CC()
         mov rax, rdx                            // Original code
         movups[rdx], xmm0                       // Original code
 
-        // Get 16:9 HUD values
-        movd xmm0, [iCustomResY]
-        cvtdq2ps xmm0, xmm0
-        mulss xmm0, [fNativeAspect]
-        movss[UIWidth], xmm0
-        movd xmm0, [iCustomResX]
-        cvtdq2ps xmm0, xmm0
-        subss xmm0, [UIWidth]
-        divss xmm0, [fTwo]
-        movss[UIOffset], xmm0
-
         // Resize HUD
+        movss xmm0, [UIOffset]
         movd xmm15, [iCustomResX]
         cvtdq2ps xmm15, xmm15
         divss xmm0, xmm15
@@ -211,6 +217,8 @@ void ReadConfig()
     inipp::get_value(ini.sections["Octopath2Fix Parameters"], "InjectionDelay", iInjectionDelay);
     inipp::get_value(ini.sections["Fix Aspect Ratio"], "Enabled", bAspectFix);
     iAspectFix = (int)bAspectFix;
+    inipp::get_value(ini.sections["Center HUD"], "Enabled", bHUDCenter);
+    iHUDCenter = (int)bHUDCenter;
     inipp::get_value(ini.sections["Fix HUD"], "Enabled", bHUDFix);
     iHUDFix = (int)bHUDFix;
     inipp::get_value(ini.sections["Fix FOV"], "Enabled", bFOVFix);
@@ -240,6 +248,7 @@ void ReadConfig()
     LOG_F(INFO, "Config Parse: iInjectionDelay: %dms", iInjectionDelay);
     LOG_F(INFO, "Config Parse: bAspectFix: %d", bAspectFix);
     LOG_F(INFO, "Config Parse: bFOVFix: %d", bFOVFix);
+    LOG_F(INFO, "Config Parse: bHUDCenter: %d", bHUDCenter);
     LOG_F(INFO, "Config Parse: bHUDFix: %d", bHUDFix);
     LOG_F(INFO, "Config Parse: fAdditionalFOV: %.2f", fAdditionalFOV);
     LOG_F(INFO, "Config Parse: iCustomResX: %d", iCustomResX);
@@ -253,6 +262,7 @@ void AspectFOVFix()
 {
     if (bAspectFix || bFOVFix)
     {
+        // Grab important values like current resolution/aspect ratio.
         uint8_t* CurrResolutionScanResult = Memory::PatternScan(baseModule, "33 ?? B9 ?? ?? ?? ?? 45 ?? ?? 48 ?? ?? 4A ?? ?? ?? 48 ?? ?? 8B ??");
         if (CurrResolutionScanResult)
         {
@@ -269,6 +279,7 @@ void AspectFOVFix()
             LOG_F(INFO, "Current Resolution: Pattern scan failed.");
         }
 
+        // Set correct aspect ratio + FOV
         uint8_t* AspectFOVFixScanResult = Memory::PatternScan(baseModule, "F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ?? ?? 8B ?? ?? ?? ?? ?? 89 ?? ?? 0F ?? ?? ?? ?? ?? ?? 33 ?? ?? 83 ?? ??");
         if (AspectFOVFixScanResult)
         {
@@ -292,8 +303,9 @@ void AspectFOVFix()
 
 void HUDFix()
 {
-    if (bHUDFix)
+    if (bHUDCenter)
     {
+        // Center HUD to 16:9
         uint8_t* CenterHUDScanResult = Memory::PatternScan(baseModule, "4C 03 ?? 4C 89 ?? ?? 48 8D ?? ?? ?? E8 ?? ?? ?? ?? 0F 10 ?? 0F 11 ?? 48 83 C4 ?? 5B C3 CC CC CC CC CC CC CC CC CC CC CC CC 48 89 ?? ?? ?? 48 89");
         if (CenterHUDScanResult)
         {
@@ -309,7 +321,11 @@ void HUDFix()
         {
             LOG_F(INFO, "Center HUD: Pattern scan failed.");
         }
+    }
 
+    if (bHUDFix)
+    {
+        // Fix offset markers (i.e map icons etc)
         uint8_t* HUDMarkersScanResult = Memory::PatternScan(baseModule, "0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? 4C");
         if (HUDMarkersScanResult)
         {
@@ -326,23 +342,27 @@ void HUDFix()
             LOG_F(INFO, "HUD Markers: Pattern scan failed.");
         }
 
-        uint8_t* BattleCursorScanResult = Memory::PatternScan(baseModule, "F3 0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? 84 ??");
-        if (BattleCursorScanResult)
+        // Fix hand cursor icon during battle being offset
+        // Battle cursor fix is unnecessary if the HUD is not centered
+        if (bHUDCenter)
         {
-            DWORD64 BattleCursorAddress = (uintptr_t)BattleCursorScanResult - 0xB;
-            int BattleCursorHookLength = Memory::GetHookLength((char*)BattleCursorAddress, 13);
-            BattleCursorReturnJMP = BattleCursorAddress + BattleCursorHookLength;
-            Memory::DetourFunction64((void*)BattleCursorAddress, BattleCursor_CC, BattleCursorHookLength);
+            uint8_t* BattleCursorScanResult = Memory::PatternScan(baseModule, "F3 0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? 84 ??");
+            if (BattleCursorScanResult)
+            {
+                DWORD64 BattleCursorAddress = (uintptr_t)BattleCursorScanResult - 0xB;
+                int BattleCursorHookLength = Memory::GetHookLength((char*)BattleCursorAddress, 13);
+                BattleCursorReturnJMP = BattleCursorAddress + BattleCursorHookLength;
+                Memory::DetourFunction64((void*)BattleCursorAddress, BattleCursor_CC, BattleCursorHookLength);
 
-            LOG_F(INFO, "Battle Cursor: Hook length is %d bytes", BattleCursorHookLength);
-            LOG_F(INFO, "Battle Cursor: Hook address is 0x%" PRIxPTR, (uintptr_t)BattleCursorAddress);
-        }
-        else if (!BattleCursorScanResult)
-        {
-            LOG_F(INFO, "Battle Cursor: Pattern scan failed.");
-        }
-    }
-    
+                LOG_F(INFO, "Battle Cursor: Hook length is %d bytes", BattleCursorHookLength);
+                LOG_F(INFO, "Battle Cursor: Hook address is 0x%" PRIxPTR, (uintptr_t)BattleCursorAddress);
+            }
+            else if (!BattleCursorScanResult)
+            {
+                LOG_F(INFO, "Battle Cursor: Pattern scan failed.");
+            }
+        } 
+    } 
 }
 
 
