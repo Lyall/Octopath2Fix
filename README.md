@@ -23,9 +23,9 @@ Please report any issues you see. (**Check the known issues list first!**)
 
 ## Screenshots
 
-| ![ezgif-5-aa9dbbde3b](https://user-images.githubusercontent.com/695941/217569024-242b3e90-0c66-46de-9460-6e31eb476f5d.gif) |
+| ![ezgif-1-adaa3f0c3c](https://user-images.githubusercontent.com/695941/226225010-073a0360-98bb-4e88-bfef-bcdf3f74abae.gif) |
 |:--:|
-| Disabled pillarboxing in cutscenes. |
+| Disabled pillarboxing. |
 
 ## Credits
 [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) for ASI loading. <br />
