@@ -206,6 +206,23 @@ void __declspec(naked) HUDTooltips_CC()
     }
 }
 
+// HUDMap Hook
+DWORD64 HUDMapReturnJMP;
+void __declspec(naked) HUDMap_CC()
+{
+    __asm
+    {
+        cvtdq2ps xmm1, xmm1                     // Original code
+        movd xmm0, eax                          // Original code
+        cvtdq2ps xmm0, xmm0                     // Original code
+        movss xmm1, [UIWidth]
+        movss[rbx], xmm1                        // Original code
+        jmp[HUDMapReturnJMP]
+    }
+}
+
+
+
 void Logging()
 {
     loguru::add_file("Octopath2Fix.log", loguru::Truncate, loguru::Verbosity_MAX);
@@ -429,6 +446,26 @@ void HUDFix()
             else if (!HUDTooltipsScanResult)
             {
                 LOG_F(INFO, "HUD Tooltips: Pattern scan failed.");
+            }
+        }
+
+        // Fix world map in-game and "new game"
+        if (bHUDCenter)
+        {
+            uint8_t* HUDMapScanResult = Memory::PatternScan(baseModule, "0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? E8 ?? ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ??");
+            if (HUDMapScanResult)
+            {
+                DWORD64 HUDMapAddress = (uintptr_t)HUDMapScanResult;
+                int HUDMapHookLength = Memory::GetHookLength((char*)HUDMapAddress, 13);
+                HUDMapReturnJMP = HUDMapAddress + HUDMapHookLength;
+                Memory::DetourFunction64((void*)HUDMapAddress, HUDMap_CC, HUDMapHookLength);
+
+                LOG_F(INFO, "HUD Map: Hook length is %d bytes", HUDMapHookLength);
+                LOG_F(INFO, "HUD Map: Hook address is 0x%" PRIxPTR, (uintptr_t)HUDMapAddress);
+            }
+            else if (!HUDMapScanResult)
+            {
+                LOG_F(INFO, "HUD Map: Pattern scan failed.");
             }
         }
 
