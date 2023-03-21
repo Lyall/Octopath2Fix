@@ -27,6 +27,7 @@ float fNewY;
 float fNativeAspect = 1.777777791f;
 float fPi = 3.14159265358979323846f;
 float fNewAspect;
+float fZero = (float)0;
 float fOne = (float)1;
 float fTwo = (float)2;
 
@@ -39,7 +40,9 @@ string sFixVer = "0.0.1";
 // CurrResolution Hook
 DWORD64 CurrResolutionReturnJMP;
 float UIWidth;
-float UIOffset;
+float UIHeight;
+float UIHorOffset;
+float UIVertOffset;
 void __declspec(naked) CurrResolution_CC()
 {
     __asm
@@ -67,7 +70,15 @@ void __declspec(naked) CurrResolution_CC()
         cvtdq2ps xmm14, xmm14
         subss xmm14, [UIWidth]
         divss xmm14, [fTwo]
-        movss[UIOffset], xmm14
+        movss[UIHorOffset], xmm14
+        movd xmm14, [iCustomResX]
+        cvtdq2ps xmm14, xmm14
+        divss xmm14, [fNativeAspect]
+        movss [UIHeight], xmm14
+        movd xmm14, [iCustomResX]
+        cvtdq2ps xmm14, xmm14
+        subss xmm14, [UIHeight]
+        movss [UIVertOffset], xmm14
 
         xorps xmm14, xmm14
         xorps xmm15, xmm15
@@ -146,7 +157,7 @@ void __declspec(naked) CenterHUD_CC()
         movups[rdx], xmm0                       // Original code
 
         // Resize HUD
-        movss xmm0, [UIOffset]
+        movss xmm0, [UIHorOffset]
         movd xmm15, [iCustomResX]
         cvtdq2ps xmm15, xmm15
         divss xmm0, xmm15
@@ -170,7 +181,7 @@ void __declspec(naked) HUDMarkers_CC()
         cvtdq2ps xmm0, xmm0                     // Original code
         movd xmm1, eax                          // Original code
         cvtdq2ps xmm1, xmm1                     // Original code
-        movss xmm0, [UIOffset]
+        movss xmm0, [UIHorOffset]
         subss xmm3, xmm0                        // Original code
         jmp[HUDMarkersReturnJMP]
     }
@@ -184,7 +195,7 @@ void __declspec(naked) BattleCursor_CC()
     {
         movd xmm0, ecx                          // Original code
         cvtdq2ps xmm0, xmm0                     // Original code
-        movss xmm0, [UIOffset]
+        movss xmm0, [UIHorOffset]
         shr rcx, 32                             // Original code
         subss xmm1, xmm0                        // Original code
         jmp[BattleCursorReturnJMP]
@@ -200,7 +211,7 @@ void __declspec(naked) HUDTooltips_CC()
         cvtdq2ps xmm1, xmm1                     // Original code
         movd xmm0, eax                          // Original code
         cvtdq2ps xmm0, xmm0                     // Original code
-        movss xmm1, [UIOffset]
+        movss xmm1, [UIHorOffset]
         movss[rbx], xmm1                        // Original code
         jmp[HUDTooltipsReturnJMP]
     }
@@ -218,6 +229,26 @@ void __declspec(naked) HUDMap_CC()
         movss xmm1, [UIWidth]
         movss[rbx], xmm1                        // Original code
         jmp[HUDMapReturnJMP]
+    }
+}
+
+// HUDBlackBars Hook
+DWORD64 HUDBlackBarsReturnJMP;
+void __declspec(naked) HUDBlackBars_CC()
+{
+    __asm
+    {
+        divss xmm2, xmm0                        // Original code
+        movaps xmm1, xmm2                       // Original code
+        mulss xmm2, [rbx + 0x04]                // Original code
+        mulss xmm1, [rbx]                       // Original code
+        cmp rcx, 264
+        je disableBlackBars
+        jmp[HUDBlackBarsReturnJMP]
+
+        disableBlackBars:
+            xorps xmm1, xmm1
+            jmp[HUDBlackBarsReturnJMP]
     }
 }
 
@@ -434,7 +465,6 @@ void HUDFix()
             uint8_t* HUDTooltipsScanResult = Memory::PatternScan(baseModule, "0F 5B ?? 66 0F ?? ?? 0F 5B ?? F3 0F ?? ?? F3 0F ?? ?? ?? 40 84");
             if (HUDTooltipsScanResult)
             {
-                Sleep(2000);
                 DWORD64 HUDTooltipsAddress = (uintptr_t)HUDTooltipsScanResult;
                 int HUDTooltipsHookLength = Memory::GetHookLength((char*)HUDTooltipsAddress, 13);
                 HUDTooltipsReturnJMP = HUDTooltipsAddress + HUDTooltipsHookLength;
@@ -446,6 +476,26 @@ void HUDFix()
             else if (!HUDTooltipsScanResult)
             {
                 LOG_F(INFO, "HUD Tooltips: Pattern scan failed.");
+            }
+        }
+
+        // Fix HUD black bars with tooltip fix
+        if (bHUDCenter)
+        {
+            uint8_t* HUDBlackBarsScanResult = Memory::PatternScan(baseModule, "F3 0F ?? ?? 0F 28 ?? F3 0F ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? 4C 8D");
+            if (HUDBlackBarsScanResult)
+            {
+                DWORD64 HUDBlackBarsAddress = (uintptr_t)HUDBlackBarsScanResult;
+                int HUDBlackBarsHookLength = Memory::GetHookLength((char*)HUDBlackBarsAddress, 15);
+                HUDBlackBarsReturnJMP = HUDBlackBarsAddress + HUDBlackBarsHookLength;
+                Memory::DetourFunction64((void*)HUDBlackBarsAddress, HUDBlackBars_CC, HUDBlackBarsHookLength);
+
+                LOG_F(INFO, "HUD Black bars: Hook length is %d bytes", HUDBlackBarsHookLength);
+                LOG_F(INFO, "HUD Black bars: Hook address is 0x%" PRIxPTR, (uintptr_t)HUDBlackBarsAddress);
+            }
+            else if (!HUDBlackBarsScanResult)
+            {
+                LOG_F(INFO, "HUD Black bars: Pattern scan failed.");
             }
         }
 
