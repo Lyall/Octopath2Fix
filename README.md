@@ -26,10 +26,6 @@ This is a **work-in-progress** fix for ultrawide/wider displays in Octopath Trav
 ## Known Issues
 Please report any issues you see. (**Check the known issues list first!**)
 
-| ![ezgif-1-540459bcd7](https://user-images.githubusercontent.com/695941/226362755-5e2678d6-4584-48d5-a0c9-57c49c495542.gif) |
-|:--:|
-| Mid-battle dialogue may be offset/cut-off. |
-
 ## Screenshots
 
 | ![ezgif-1-adaa3f0c3c](https://user-images.githubusercontent.com/695941/226225010-073a0360-98bb-4e88-bfef-bcdf3f74abae.gif) |
