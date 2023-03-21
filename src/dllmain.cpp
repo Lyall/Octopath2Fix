@@ -22,6 +22,7 @@ int iHUDFix;
 int iHUDCenter;
 
 // Variables
+int iNarrowAspect;
 float fNewX;
 float fNewY;
 float fNativeAspect = 1.777777791f;
@@ -75,9 +76,10 @@ void __declspec(naked) CurrResolution_CC()
         cvtdq2ps xmm14, xmm14
         divss xmm14, [fNativeAspect]
         movss [UIHeight], xmm14
-        movd xmm14, [iCustomResX]
+        movd xmm14, [iCustomResY]
         cvtdq2ps xmm14, xmm14
         subss xmm14, [UIHeight]
+        divss xmm14, [fTwo]
         movss [UIVertOffset], xmm14
 
         xorps xmm14, xmm14
@@ -95,6 +97,7 @@ void __declspec(naked) AspectFOVFix_CC()
 {
     __asm
     {
+        mov [iNarrowAspect], 1
         mov eax, [fNewAspect]                  // Move new aspect to eax
         cmp eax, [fNativeAspect]               // Compare new aspect to native
         jle originalCode                       // Skip FOV fix if fNewAspect<=fNativeAspect
@@ -102,7 +105,8 @@ void __declspec(naked) AspectFOVFix_CC()
         je modifyFOV                           // jmp to FOV fix
         jmp originalCode                       // jmp to originalCode
 
-        modifyFOV :
+        modifyFOV:
+            mov[iNarrowAspect], 0              // Note that aspect ratio is <= 1.78
             fld dword ptr[rbx + 0x1F8]         // Push original FOV to FPU register st(0)
             fmul[FOVPiDiv]                     // Multiply st(0) by Pi/360
             fptan                              // Get partial tangent. Store result in st(1). Store 1.0 in st(0)
@@ -117,7 +121,7 @@ void __declspec(naked) AspectFOVFix_CC()
             movss xmm0, [FOVFinalValue]        // Copy final FOV value to xmm0
             jmp originalCode
 
-        originalCode :
+        originalCode:
             movss[rdi + 0x18], xmm0            // Original code
             cmp[iAspectFix], 1
             je modifyAspect
@@ -138,11 +142,19 @@ void __declspec(naked) FOVCulling_CC()
 {
     __asm
     {
-        movss xmm1, [fOne]                      // 90/90, there is undoubtedly a smarter way of doing this
-        movss[rdx + 0x000002E8], xmm1           // Original code
-        xor r8d, r8d                            // Original code
-        movsd xmm0, [rbp + 0x000000D0]          // Original code
+        cmp iFOVFix, 1
+        je cullingFix
+        movss[rdx + 0x000002E8], xmm1      // Original code
+        xor r8d, r8d                       // Original code
+        movsd xmm0, [rbp + 0x000000D0]     // Original code
         jmp[FOVCullingReturnJMP]
+
+        cullingFix:
+            movss xmm1, [fOne]                 // 90/90, there is undoubtedly a smarter way of doing this
+            movss[rdx + 0x000002E8], xmm1      // Original code
+            xor r8d, r8d                       // Original code
+            movsd xmm0, [rbp + 0x000000D0]     // Original code
+            jmp[FOVCullingReturnJMP]
     }
 }
 
@@ -155,20 +167,35 @@ void __declspec(naked) CenterHUD_CC()
         movups xmm0, [rcx + 0x00000210]         // Original code
         mov rax, rdx                            // Original code
         movups[rdx], xmm0                       // Original code
-
-        // Resize HUD
-        movss xmm0, [UIHorOffset]
-        movd xmm15, [iCustomResX]
-        cvtdq2ps xmm15, xmm15
-        divss xmm0, xmm15
-        movss [rdx], xmm0
-        movss xmm0, [fOne]
-        subss xmm0, [rdx]
-        movss [rdx+0x8], xmm0
-        xorps xmm15, xmm15
-
+        cmp [iNarrowAspect], 0
+        je resizeHUDHor
+        cmp [iNarrowAspect], 1
+        je resizeHUDVert
         ret                                     // Original code
         jmp[CenterHUDReturnJMP]                 // Just in case
+
+        resizeHUDHor:
+            movss xmm0, [UIHorOffset]
+            movd xmm15, [iCustomResX]
+            cvtdq2ps xmm15, xmm15
+            divss xmm0, xmm15
+            movss [rdx], xmm0
+            movss xmm0, [fOne]
+            subss xmm0, [rdx]
+            movss [rdx+0x8], xmm0
+            xorps xmm15, xmm15
+            ret                                     // Original code
+            jmp[CenterHUDReturnJMP]                 // Just in case
+
+        resizeHUDVert:
+            movss xmm0, [UIVertOffset]
+            movd xmm15, [iCustomResY]
+            cvtdq2ps xmm15, xmm15
+            divss xmm0, xmm15
+            movss[rdx+0x4], xmm0
+            xorps xmm15, xmm15
+            ret                                     // Original code
+            jmp[CenterHUDReturnJMP]                 // Just in case
     }
 }
 
@@ -178,12 +205,22 @@ void __declspec(naked) HUDMarkers_CC()
 {
     __asm
     {
+        cmp iNarrowAspect, 1
+        je markersVert
         cvtdq2ps xmm0, xmm0                     // Original code
         movd xmm1, eax                          // Original code
         cvtdq2ps xmm1, xmm1                     // Original code
         movss xmm0, [UIHorOffset]
         subss xmm3, xmm0                        // Original code
         jmp[HUDMarkersReturnJMP]
+
+        markersVert:
+            cvtdq2ps xmm0, xmm0                 // Original code
+            movd xmm1, eax                      // Original code
+            cvtdq2ps xmm1, xmm1                 // Original code
+            movss xmm1, [UIVertOffset]
+            subss xmm3, xmm0                    // Original code
+            jmp[HUDMarkersReturnJMP]
     }
 }
 
@@ -193,12 +230,22 @@ void __declspec(naked) BattleCursor_CC()
 {
     __asm
     {
+        cmp iNarrowAspect, 1
+        je cursorVert
+        movss xmm0, [UIHorOffset]
+        subss xmm1, xmm0                        // Original code
         movd xmm0, ecx                          // Original code
         cvtdq2ps xmm0, xmm0                     // Original code
-        movss xmm0, [UIHorOffset]
-        shr rcx, 32                             // Original code
-        subss xmm1, xmm0                        // Original code
+        movss[rbx], xmm1                        // Original code
         jmp[BattleCursorReturnJMP]
+
+        cursorVert:
+            subss xmm1, xmm0                        // Original code
+            movd xmm0, ecx                          // Original code
+            cvtdq2ps xmm0, xmm0                     // Original code
+            movss xmm0, [UIVertOffset]
+            movss[rbx], xmm1                        // Original code
+            jmp[BattleCursorReturnJMP]
     }
 }
 
@@ -208,12 +255,22 @@ void __declspec(naked) HUDTooltips_CC()
 {
     __asm
     {
+        cmp iNarrowAspect, 1
+        je tooltipsVert
         cvtdq2ps xmm1, xmm1                     // Original code
         movd xmm0, eax                          // Original code
         cvtdq2ps xmm0, xmm0                     // Original code
         movss xmm1, [UIHorOffset]
         movss[rbx], xmm1                        // Original code
         jmp[HUDTooltipsReturnJMP]
+
+        tooltipsVert:
+            cvtdq2ps xmm1, xmm1                     // Original code
+            movd xmm0, eax                          // Original code
+            cvtdq2ps xmm0, xmm0                     // Original code
+            movss xmm0, [UIVertOffset]
+            movss[rbx], xmm1                        // Original code
+            jmp[HUDTooltipsReturnJMP]
     }
 }
 
@@ -223,12 +280,22 @@ void __declspec(naked) HUDMap_CC()
 {
     __asm
     {
+        cmp iNarrowAspect, 1
+        je mapVert
         cvtdq2ps xmm1, xmm1                     // Original code
         movd xmm0, eax                          // Original code
         cvtdq2ps xmm0, xmm0                     // Original code
         movss xmm1, [UIWidth]
         movss[rbx], xmm1                        // Original code
         jmp[HUDMapReturnJMP]
+
+        mapVert:
+            cvtdq2ps xmm1, xmm1                     // Original code
+            movd xmm0, eax                          // Original code
+            cvtdq2ps xmm0, xmm0                     // Original code
+            movss xmm0, [UIHeight]
+            movss[rbx], xmm1                        // Original code
+            jmp[HUDMapReturnJMP]
     }
 }
 
@@ -248,6 +315,7 @@ void __declspec(naked) HUDBlackBars_CC()
 
         disableBlackBars:
             xorps xmm1, xmm1
+            xorps xmm2, xmm2
             jmp[HUDBlackBarsReturnJMP]
     }
 }
@@ -445,7 +513,7 @@ void HUDFix()
             uint8_t* BattleCursorScanResult = Memory::PatternScan(baseModule, "F3 0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? 84 ??");
             if (BattleCursorScanResult)
             {
-                DWORD64 BattleCursorAddress = (uintptr_t)BattleCursorScanResult - 0xB;
+                DWORD64 BattleCursorAddress = (uintptr_t)BattleCursorScanResult;
                 int BattleCursorHookLength = Memory::GetHookLength((char*)BattleCursorAddress, 13);
                 BattleCursorReturnJMP = BattleCursorAddress + BattleCursorHookLength;
                 Memory::DetourFunction64((void*)BattleCursorAddress, BattleCursor_CC, BattleCursorHookLength);
