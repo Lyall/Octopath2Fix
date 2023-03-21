@@ -193,6 +193,9 @@ void __declspec(naked) CenterHUD_CC()
             cvtdq2ps xmm15, xmm15
             divss xmm0, xmm15
             movss[rdx+0x4], xmm0
+            movss xmm0, [fOne]
+            subss xmm0, [rdx+0x4]
+            movss [rdx+0xC], xmm0
             xorps xmm15, xmm15
             ret                                     // Original code
             jmp[CenterHUDReturnJMP]                 // Just in case
@@ -319,8 +322,6 @@ void __declspec(naked) HUDBlackBars_CC()
             jmp[HUDBlackBarsReturnJMP]
     }
 }
-
-
 
 void Logging()
 {
