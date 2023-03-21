@@ -21,15 +21,10 @@ This is a **work-in-progress** fix for ultrawide/wider displays in Octopath Trav
 
 ## Known Issues
 Please report any issues you see. (**Check the known issues list first!**)
-| ![ezgif-1-a9ce43586a](https://user-images.githubusercontent.com/695941/226361946-559ef79f-7223-4a09-b561-fab51de357d5.gif) |
-|:--:|
-| UI tooltips are offset. |
 
 | ![ezgif-1-540459bcd7](https://user-images.githubusercontent.com/695941/226362755-5e2678d6-4584-48d5-a0c9-57c49c495542.gif) |
 |:--:|
 | Mid-battle dialogue may be offset/cut-off. |
-
-- Map cursor may be offset or move incorrectly.
 
 ## Screenshots
 
