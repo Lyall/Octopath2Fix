@@ -19,6 +19,10 @@ This is a **work-in-progress** fix for ultrawide/wider displays in Octopath Trav
 ## Configuration
 - See **Octopath2Fix.ini** to adjust settings for the fix.
 
+### Linux/Steam Deck
+- Make sure you set the Steam launch options to `WINEDLLOVERRIDES="d3d11.dll=n,b" %command%`
+<img src="https://user-images.githubusercontent.com/695941/226513105-e2aedf8f-d596-4ffb-a121-ac020d9e867f.jpg" width="646" height="113" />
+
 ## Known Issues
 Please report any issues you see. (**Check the known issues list first!**)
 
