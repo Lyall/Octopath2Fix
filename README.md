@@ -19,17 +19,12 @@ This is a **work-in-progress** fix for ultrawide/wider displays in Octopath Trav
 ## Configuration
 - See **Octopath2Fix.ini** to adjust settings for the fix.
 
+## Linux/Steam Deck
+- Make sure you set the Steam launch options to `WINEDLLOVERRIDES="d3d11.dll=n,b" %command%`
+<img src="https://user-images.githubusercontent.com/695941/226513105-e2aedf8f-d596-4ffb-a121-ac020d9e867f.jpg" width="646" height="113" />
+
 ## Known Issues
 Please report any issues you see. (**Check the known issues list first!**)
-| ![ezgif-1-a9ce43586a](https://user-images.githubusercontent.com/695941/226361946-559ef79f-7223-4a09-b561-fab51de357d5.gif) |
-|:--:|
-| UI tooltips are offset. |
-
-| ![ezgif-1-540459bcd7](https://user-images.githubusercontent.com/695941/226362755-5e2678d6-4584-48d5-a0c9-57c49c495542.gif) |
-|:--:|
-| Mid-battle dialogue may be offset/cut-off. |
-
-- Map cursor may be offset or move incorrectly.
 
 ## Screenshots
 
