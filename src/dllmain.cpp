@@ -144,9 +144,9 @@ void __declspec(naked) FOVCulling_CC()
     {
         cmp iFOVFix, 1
         je cullingFix
-        movss[rdx + 0x000002E8], xmm1      // Original code
-        xor r8d, r8d                       // Original code
-        movsd xmm0, [rbp + 0x000000D0]     // Original code
+        movss[rdx + 0x000002E8], xmm1         // Original code
+        xor r8d, r8d                          // Original code
+        movsd xmm0, [rbp + 0x000000D0]        // Original code
         jmp[FOVCullingReturnJMP]
 
         cullingFix:
@@ -167,6 +167,9 @@ void __declspec(naked) CenterHUD_CC()
         movups xmm0, [rcx + 0x00000210]         // Original code
         mov rax, rdx                            // Original code
         movups[rdx], xmm0                       // Original code
+
+        cmp byte ptr[rcx + 0x260], 0            // Compare "FadeType", if >0 do not center.
+        ja doNothing
         cmp [iNarrowAspect], 0
         je resizeHUDHor
         cmp [iNarrowAspect], 1
@@ -184,8 +187,8 @@ void __declspec(naked) CenterHUD_CC()
             subss xmm0, [rdx]
             movss [rdx+0x8], xmm0
             xorps xmm15, xmm15
-            ret                                     // Original code
-            jmp[CenterHUDReturnJMP]                 // Just in case
+            ret                                 // Original code
+            jmp[CenterHUDReturnJMP]             // Just in case
 
         resizeHUDVert:
             movss xmm0, [UIVertOffset]
@@ -197,8 +200,12 @@ void __declspec(naked) CenterHUD_CC()
             subss xmm0, [rdx+0x4]
             movss [rdx+0xC], xmm0
             xorps xmm15, xmm15
-            ret                                     // Original code
-            jmp[CenterHUDReturnJMP]                 // Just in case
+            ret                                 // Original code
+            jmp[CenterHUDReturnJMP]             // Just in case
+
+        doNothing:
+            ret                                 // Original code
+            jmp[CenterHUDReturnJMP]             // Just in case
     }
 }
 
