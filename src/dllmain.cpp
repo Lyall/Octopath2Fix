@@ -168,8 +168,15 @@ void __declspec(naked) CenterHUD_CC()
         mov rax, rdx                            // Original code
         movups[rdx], xmm0                       // Original code
 
-        cmp byte ptr[rcx + 0x260], 0            // Compare "FadeType", if >0 do not center.
-        ja doNothing
+        // This isn't optimal but it works
+        // Ideally we would get GObject name and check for "fade" or "wipe"
+        cmp byte ptr[rcx + 0x260], 1            // (FadeType) If 1 (fade in) do not center
+        je doNothing
+        cmp byte ptr[rcx + 0x260], 2            // (FadeType) If 2 (fade out) do not center
+        je doNothing
+        cmp byte ptr[rcx + 0x373], 255          // (DebugTempWipeOutColor.A) Do not center for battle wipes
+        je doNothing
+
         cmp [iNarrowAspect], 0
         je resizeHUDHor
         cmp [iNarrowAspect], 1
