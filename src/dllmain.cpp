@@ -12,14 +12,13 @@ bool bAspectFix;
 bool bFOVFix;
 bool bHUDFix;
 bool bHUDCenter;
+bool bUncapFPS;
 int iCustomResX;
 int iCustomResY;
 int iInjectionDelay;
 float fAdditionalFOV;
 int iAspectFix;
 int iFOVFix;
-int iHUDFix;
-int iHUDCenter;
 
 // Variables
 int iNarrowAspect;
@@ -36,7 +35,7 @@ string sExeName;
 string sGameName;
 string sExePath;
 string sGameVersion;
-string sFixVer = "0.0.3";
+string sFixVer = "0.0.4";
 
 // CurrResolution Hook
 DWORD64 CurrResolutionReturnJMP;
@@ -341,6 +340,34 @@ void __declspec(naked) HUDBlackBars_CC()
     }
 }
 
+// UncapFPS Hook
+DWORD64 UncapFPSReturnJMP;
+void __declspec(naked) UncapFPS_CC()
+{
+    __asm
+    {
+        mov ecx, [rsp + 0x38]                  // Original code
+        cmp ecx, 30
+        je uncapFPS
+        cmp ecx, 60
+        je uncapFPS
+        cmp ecx, 120
+        je uncapFPS
+        test rax, rax                          // Original code
+        setne dil                              // Original code
+        add rdi, rax                           // Original code
+        jmp[UncapFPSReturnJMP]
+
+        uncapFPS:
+            mov ecx, 0
+            test rax, rax                          // Original code
+            setne dil                              // Original code
+            add rdi, rax                           // Original code
+            jmp[UncapFPSReturnJMP]
+       
+    }
+}
+
 void Logging()
 {
     loguru::add_file("Octopath2Fix.log", loguru::Truncate, loguru::Verbosity_MAX);
@@ -382,12 +409,11 @@ void ReadConfig()
     inipp::get_value(ini.sections["Fix Aspect Ratio"], "Enabled", bAspectFix);
     iAspectFix = (int)bAspectFix;
     inipp::get_value(ini.sections["Center HUD"], "Enabled", bHUDCenter);
-    iHUDCenter = (int)bHUDCenter;
     inipp::get_value(ini.sections["Fix HUD"], "Enabled", bHUDFix);
-    iHUDFix = (int)bHUDFix;
     inipp::get_value(ini.sections["Fix FOV"], "Enabled", bFOVFix);
     iFOVFix = (int)bFOVFix;
     inipp::get_value(ini.sections["Fix FOV"], "AdditionalFOV", fAdditionalFOV);
+    inipp::get_value(ini.sections["Uncap FPS"], "Enabled", bUncapFPS);
 
     // Custom resolution
     if (iCustomResX > 0 && iCustomResY > 0)
@@ -412,9 +438,10 @@ void ReadConfig()
     LOG_F(INFO, "Config Parse: iInjectionDelay: %dms", iInjectionDelay);
     LOG_F(INFO, "Config Parse: bAspectFix: %d", bAspectFix);
     LOG_F(INFO, "Config Parse: bFOVFix: %d", bFOVFix);
+    LOG_F(INFO, "Config Parse: fAdditionalFOV: %.2f", fAdditionalFOV);
     LOG_F(INFO, "Config Parse: bHUDCenter: %d", bHUDCenter);
     LOG_F(INFO, "Config Parse: bHUDFix: %d", bHUDFix);
-    LOG_F(INFO, "Config Parse: fAdditionalFOV: %.2f", fAdditionalFOV);
+    LOG_F(INFO, "Config Parse: bUncapFPS: %d", bUncapFPS);
     LOG_F(INFO, "Config Parse: iCustomResX: %d", iCustomResX);
     LOG_F(INFO, "Config Parse: iCustomResY: %d", iCustomResY);
     LOG_F(INFO, "Config Parse: fNewX: %.2f", fNewX);
@@ -609,6 +636,28 @@ void HUDFix()
     } 
 }
 
+void UncapFPS()
+{
+    if (bUncapFPS)
+    {
+        uint8_t* UncapFPSScanResult = Memory::PatternScan(baseModule, "8B ?? ?? ?? 48 ?? ?? 40 ?? ?? ?? 48 ?? ?? 48 ?? ?? ?? E8 ?? ?? ?? ?? 48 ?? ?? ?? ?? 48 ?? ?? ?? 5F C3 CC EC");
+        if (UncapFPSScanResult)
+        {
+            DWORD64 UncapFPSAddress = (uintptr_t)UncapFPSScanResult;
+            int UncapFPSHookLength = Memory::GetHookLength((char*)UncapFPSAddress, 13);
+            UncapFPSReturnJMP = UncapFPSAddress + UncapFPSHookLength;
+            Memory::DetourFunction64((void*)UncapFPSAddress, UncapFPS_CC, UncapFPSHookLength);
+
+            LOG_F(INFO, "Uncap FPS: Hook length is %d bytes", UncapFPSHookLength);
+            LOG_F(INFO, "Uncap FPS: Hook address is 0x%" PRIxPTR, (uintptr_t)UncapFPSAddress);
+        }
+        else if (!UncapFPSScanResult)
+        {
+            LOG_F(INFO, "Uncap FPS: Pattern scan failed.");
+        }
+    }
+}
+
 
 DWORD __stdcall Main(void*)
 {
@@ -617,6 +666,7 @@ DWORD __stdcall Main(void*)
     Sleep(iInjectionDelay);
     AspectFOVFix();
     HUDFix();
+    UncapFPS();
     return true; // end thread
 }
 
