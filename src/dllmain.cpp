@@ -177,6 +177,10 @@ void __declspec(naked) CenterHUD_CC()
         cmp byte ptr[rcx + 0x373], 255          // (DebugTempWipeOutColor.A) Do not center for battle wipes
         je doNothing
 
+        // This may be buggy, could be other HUD objects with an InnerSeq property 
+        cmp byte ptr[rcx + 0x358], 1            // (InnerSeq) Do not center for cutscene background fade
+        je doNothing
+
         cmp [iNarrowAspect], 0
         je resizeHUDHor
         cmp [iNarrowAspect], 1
