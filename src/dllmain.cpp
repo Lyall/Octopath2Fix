@@ -34,8 +34,7 @@ float fTwo = (float)2;
 string sExeName;
 string sGameName;
 string sExePath;
-string sGameVersion;
-string sFixVer = "0.0.4";
+string sFixVer = "0.0.5";
 
 // CurrResolution Hook
 DWORD64 CurrResolutionReturnJMP;
@@ -388,18 +387,28 @@ void ReadConfig()
 
     // Initialize config
     // UE4 games use launchers so config path is relative to launcher
-    sGameVersion = "Steam";
     std::ifstream iniFile(".\\Octopath_Traveler2\\Binaries\\Win64\\Octopath2Fix.ini");
     if (!iniFile)
     {
-        LOG_F(ERROR, "Failed to load config file. (Steam)");
+        LOG_F(ERROR, "Failed to load config file.");
+        LOG_F(ERROR, "Trying alternate config path.");
+        std::ifstream iniFile("Octopath2Fix.ini");
+        if (!iniFile)
+        {
+            LOG_F(ERROR, "Failed to load config file. (Alternate path)");
+            LOG_F(ERROR, "Please ensure that the ini configuration file is in the correct place.");
+        }
+        else
+        {
+            ini.parse(iniFile);
+            LOG_F(INFO, "Successfuly loaded config file. (Alternate path)");
+        }
     }
     else
     {
         ini.parse(iniFile);
+        LOG_F(INFO, "Successfuly loaded config file.");
     }
-    
-    LOG_F(INFO, "Game Version: %s", sGameVersion.c_str());
 
     inipp::get_value(ini.sections["Octopath2Fix Parameters"], "InjectionDelay", iInjectionDelay);
     inipp::get_value(ini.sections["Fix Aspect Ratio"], "Enabled", bAspectFix);
