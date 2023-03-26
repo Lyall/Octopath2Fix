@@ -174,6 +174,8 @@ void __declspec(naked) CenterHUD_CC()
         je doNothing
         cmp byte ptr[rcx + 0x373], 255          // (DebugTempWipeOutColor.A) Do not center for battle wipes
         je doNothing
+        cmp dword ptr[rcx + 0x190], 0x47879600  // Identifying mark EventBackGroundFade_C.Padding.Left ((float)69420)
+        je doNothing
 
         cmp [iNarrowAspect], 0
         je resizeHUDHor
@@ -190,7 +192,7 @@ void __declspec(naked) CenterHUD_CC()
             movss [rdx], xmm0
             movss xmm0, [fOne]
             subss xmm0, [rdx]
-            movss [rdx+0x8], xmm0
+            movss [rdx + 0x8], xmm0
             xorps xmm15, xmm15
             ret                                 // Original code
             jmp[CenterHUDReturnJMP]             // Just in case
@@ -200,15 +202,15 @@ void __declspec(naked) CenterHUD_CC()
             movd xmm15, [iCustomResY]
             cvtdq2ps xmm15, xmm15
             divss xmm0, xmm15
-            movss[rdx+0x4], xmm0
+            movss[rdx + 0x4], xmm0
             movss xmm0, [fOne]
-            subss xmm0, [rdx+0x4]
-            movss [rdx+0xC], xmm0
+            subss xmm0, [rdx + 0x4]
+            movss [rdx + 0xC], xmm0
             xorps xmm15, xmm15
             ret                                 // Original code
             jmp[CenterHUDReturnJMP]             // Just in case
 
-        doNothing:
+         doNothing:
             ret                                 // Original code
             jmp[CenterHUDReturnJMP]             // Just in case
     }
@@ -360,6 +362,23 @@ void __declspec(naked) UncapFPS_CC()
             add rdi, rax                           // Original code
             jmp[UncapFPSReturnJMP]
        
+    }
+}
+
+// EventBGFadeOut Hook
+DWORD64 EventBGFadeOutReturnJMP;
+void __declspec(naked) EventBGFadeOut_CC()
+{
+    __asm
+    {
+        mov dword ptr[rcx+0x190], 0x47879600     // Write identifying value to EventBGFade object
+        mov[rsp + 0x08], rbx            // Original code
+        push rbp                        // Original code
+        push rsi                        // Original code
+        push rdi                        // Original code
+        sub rsp, 64                     // Original code
+        xor edi, edi                    // Original code
+        jmp[EventBGFadeOutReturnJMP]
     }
 }
 
@@ -638,6 +657,25 @@ void HUDFix()
             }
         }
 
+        // Create marker in event background fade object
+        if (bHUDCenter)
+        {
+            uint8_t* EventBGFadeOutScanResult = Memory::PatternScan(baseModule, "E9 ?? ?? ?? ?? 6D CB 85 C7");
+            if (EventBGFadeOutScanResult)
+            {
+                DWORD64 EventBGFadeOutAddress = Memory::GetAbsolute((uintptr_t)EventBGFadeOutScanResult + 0x1);
+                int EventBGFadeOutHookLength = Memory::GetHookLength((char*)EventBGFadeOutAddress, 13);
+                EventBGFadeOutReturnJMP = EventBGFadeOutAddress + EventBGFadeOutHookLength;
+                Memory::DetourFunction64((void*)EventBGFadeOutAddress, EventBGFadeOut_CC, EventBGFadeOutHookLength);
+
+                LOG_F(INFO, "EventBG Fade Out: Hook length is %d bytes", EventBGFadeOutHookLength);
+                LOG_F(INFO, "EventBG Fade Out: Hook address is 0x%" PRIxPTR, (uintptr_t)EventBGFadeOutAddress);
+            }
+            else if (!EventBGFadeOutScanResult)
+            {
+                LOG_F(INFO, "EventBG Fade Out: Pattern scan failed.");
+            }
+        }
     } 
 }
 
