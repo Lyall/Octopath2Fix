@@ -34,7 +34,7 @@ float fTwo = (float)2;
 string sExeName;
 string sGameName;
 string sExePath;
-string sFixVer = "0.0.5";
+string sFixVer = "0.0.6";
 
 // CurrResolution Hook
 DWORD64 CurrResolutionReturnJMP;
@@ -166,15 +166,7 @@ void __declspec(naked) CenterHUD_CC()
         mov rax, rdx                            // Original code
         movups[rdx], xmm0                       // Original code
 
-        // This isn't optimal but it works
-        // Ideally we would get GObject name and check for "fade" or "wipe"
-        cmp byte ptr[rcx + 0x260], 1            // (FadeType) If 1 (fade in) do not center
-        je doNothing
-        cmp byte ptr[rcx + 0x260], 2            // (FadeType) If 2 (fade out) do not center
-        je doNothing
-        cmp byte ptr[rcx + 0x373], 255          // (DebugTempWipeOutColor.A) Do not center for battle wipes
-        je doNothing
-        cmp dword ptr[rcx + 0x190], 0x47879600  // Identifying mark EventBackGroundFade_C.Padding.Left ((float)69420)
+        cmp dword ptr[rcx + 0x190], 0x47879600  // Identifying mark Padding.Left ((float)69420)
         je doNothing
 
         cmp [iNarrowAspect], 0
@@ -208,7 +200,6 @@ void __declspec(naked) CenterHUD_CC()
             movss [rdx + 0xC], xmm0
             xorps xmm15, xmm15
             ret                                 // Original code
-            jmp[CenterHUDReturnJMP]             // Just in case
 
          doNothing:
             ret                                 // Original code
@@ -372,13 +363,44 @@ void __declspec(naked) EventBGFadeOut_CC()
     __asm
     {
         mov dword ptr[rcx+0x190], 0x47879600     // Write identifying value to EventBGFade object
-        mov[rsp + 0x08], rbx            // Original code
-        push rbp                        // Original code
-        push rsi                        // Original code
-        push rdi                        // Original code
-        sub rsp, 64                     // Original code
-        xor edi, edi                    // Original code
+        mov[rsp + 0x08], rbx                     // Original code
+        push rbp                                 // Original code
+        push rsi                                 // Original code
+        push rdi                                 // Original code
+        sub rsp, 64                              // Original code
+        xor edi, edi                             // Original code
         jmp[EventBGFadeOutReturnJMP]
+    }
+}
+
+// BattleWipe Hook
+DWORD64 BattleWipeReturnJMP;
+void __declspec(naked) BattleWipe_CC()
+{
+    __asm
+    {
+        mov dword ptr[rcx + 0x190], 0x47879600     // Write identifying value to EventBGFade object
+        mov rax, [rdx + 0x20]                      // Original code
+        xor r9d, r9d                               // Original code
+        test rax, rax                              // Original code
+        setne r9b                                  // Original code
+        jmp[BattleWipeReturnJMP]
+    }
+}
+
+// FadeInit Hook
+DWORD64 FadeInitReturnJMP;
+void __declspec(naked) FadeInit_CC()
+{
+    __asm
+    {
+        mov dword ptr[rcx + 0x190], 0x47879600      // Write identifying value to EventBGFade object
+        mov[rsp + 0x08], rbx                        // Original code
+        mov[rsp + 0x18], rbp                        // Original code
+        push rsi                                    // Original code
+        push rdi                                    // Original code
+        push r14                                    // Original code
+        jmp[FadeInitReturnJMP]
     }
 }
 
@@ -674,6 +696,46 @@ void HUDFix()
             else if (!EventBGFadeOutScanResult)
             {
                 LOG_F(INFO, "EventBG Fade Out: Pattern scan failed.");
+            }
+        }
+
+        // Create marker in battle wipe object
+        if (bHUDCenter)
+        {
+            uint8_t* BattleWipeScanResult = Memory::PatternScan(baseModule, "E9 ?? ?? ?? ?? 95 66 1D");
+            if (BattleWipeScanResult)
+            {
+                DWORD64 BattleWipeAddress = Memory::GetAbsolute((uintptr_t)BattleWipeScanResult + 0x1);
+                int BattleWipeHookLength = Memory::GetHookLength((char*)BattleWipeAddress, 13);
+                BattleWipeReturnJMP = BattleWipeAddress + BattleWipeHookLength;
+                Memory::DetourFunction64((void*)BattleWipeAddress, BattleWipe_CC, BattleWipeHookLength);
+
+                LOG_F(INFO, "Battle Wipe: Hook length is %d bytes", BattleWipeHookLength);
+                LOG_F(INFO, "Battle Wipe: Hook address is 0x%" PRIxPTR, (uintptr_t)BattleWipeAddress);
+            }
+            else if (!BattleWipeScanResult)
+            {
+                LOG_F(INFO, "Battle Wipe: Pattern scan failed.");
+            }
+        }
+
+        // Create marker in fade object
+        if (bHUDCenter)
+        {
+            uint8_t* FadeInitScanResult = Memory::PatternScan(baseModule, "41 ?? 5F 5E C3 CC CC CC CC CC CC CC CC CC CC CC CC CC CC 48 89 ?? ?? ?? 55 56 57 41 ?? 41 ?? 48 8D");
+            if (FadeInitScanResult)
+            {
+                DWORD64 FadeInitAddress = (uintptr_t)FadeInitScanResult - 0xDD;
+                int FadeInitHookLength = Memory::GetHookLength((char*)FadeInitAddress, 13);
+                FadeInitReturnJMP = FadeInitAddress + FadeInitHookLength;
+                Memory::DetourFunction64((void*)FadeInitAddress, FadeInit_CC, FadeInitHookLength);
+
+                LOG_F(INFO, "Fade Init: Hook length is %d bytes", FadeInitHookLength);
+                LOG_F(INFO, "Fade Init: Hook address is 0x%" PRIxPTR, (uintptr_t)FadeInitAddress);
+            }
+            else if (!FadeInitScanResult)
+            {
+                LOG_F(INFO, "Fade Init: Pattern scan failed.");
             }
         }
     } 
