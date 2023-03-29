@@ -23,7 +23,8 @@ This is a fix for ultrawide/narrower displays in Octopath Traveler 2.
 
 ## Known Issues
 Please report any issues you see. (**Check the known issues list first!**)
-- "Porthole" view through buildings is offset. (Thanks THE-GaYmer for pointing this out!)
+- "Porthole" view through buildings displays at the wrong aspect ratio. (Thanks THE-GaYmer for pointing this out!)
+- In battle, cursors and damage numbers may be somewhat offset.
 
 ## Screenshots
 
