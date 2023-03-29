@@ -158,6 +158,7 @@ void __declspec(naked) FOVCulling_CC()
 
 // CenterHUD Hook
 DWORD64 CenterHUDReturnJMP;
+int iFixedLetterbox;
 void __declspec(naked) CenterHUD_CC()
 {
     __asm
@@ -168,13 +169,18 @@ void __declspec(naked) CenterHUD_CC()
 
         cmp dword ptr[rcx + 0x190], 0x47879600  // Identifying mark Padding.Left ((float)69420)
         je doNothing
+        cmp iFixedLetterbox, 1
+        jne fixLetterbox
+        jmp resizeHUD
 
-        cmp [iNarrowAspect], 0
-        je resizeHUDHor
-        cmp [iNarrowAspect], 1
-        je resizeHUDVert
-        ret                                     // Original code
-        jmp[CenterHUDReturnJMP]                 // Just in case
+        resizeHUD:
+            cmp [iNarrowAspect], 0
+            je resizeHUDHor
+            cmp [iNarrowAspect], 1
+            je resizeHUDVert
+            xorps xmm15,xmm15
+            ret                                     // Original code
+            jmp[CenterHUDReturnJMP]                 // Just in case
 
         resizeHUDHor:
             movss xmm0, [UIHorOffset]
@@ -201,7 +207,32 @@ void __declspec(naked) CenterHUD_CC()
             xorps xmm15, xmm15
             ret                                 // Original code
 
-         doNothing:
+        fixLetterbox:
+            cmp iFixedLetterbox, 1
+            je resizeHUD
+            movd xmm15, [iCustomResX]
+            cvtdq2ps xmm15, xmm15
+            comiss xmm15, [rcx + 0x380]
+            jne resizeHUD
+            movd xmm15, [iCustomResY]
+            cvtdq2ps xmm15, xmm15
+            comiss xmm15, [rcx + 0x384]
+            jne resizeHUD
+            push r8
+            mov r8, [rcx + 0x360]               // Bottom
+            mov byte ptr[r8 + 0x174], 0
+            mov r8, [rcx + 0x368]               // Left
+            mov byte ptr[r8 + 0x174], 0
+            mov r8, [rcx + 0x370]               // Right
+            mov byte ptr[r8 + 0x174], 0
+            mov r8, [rcx + 0x378]               // Top
+            mov byte ptr[r8 + 0x174], 0
+            pop r8
+            mov iFixedLetterbox, 1
+            ret
+
+        doNothing:
+            xorps xmm15,xmm15
             ret                                 // Original code
             jmp[CenterHUDReturnJMP]             // Just in case
     }
@@ -234,24 +265,56 @@ void __declspec(naked) HUDMarkers_CC()
 
 // BattleCursor Hook
 DWORD64 BattleCursorReturnJMP;
+float fPosOffset = (float)20;
 void __declspec(naked) BattleCursor_CC()
 {
     __asm
     {
         cmp iNarrowAspect, 1
         je cursorVert
-        movss xmm0, [UIHorOffset]
-        subss xmm1, xmm0                        // Original code
-        movd xmm0, ecx                          // Original code
-        cvtdq2ps xmm0, xmm0                     // Original code
-        movss[rbx], xmm1                        // Original code
-        jmp[BattleCursorReturnJMP]
+        jmp cursorHor
+
+        cursorHor:
+            movd xmm15, [iCustomResX]
+            cvtdq2ps xmm15, xmm15
+            divss xmm15, [fTwo]
+            addss xmm15, [fPosOffset]
+            movd xmm14, [iCustomResX]
+            cvtdq2ps xmm14, xmm14
+            divss xmm14, [fTwo]
+            subss xmm14, [fPosOffset]
+            comiss xmm15, xmm1
+            jb $+0x8 // ->
+            comiss xmm14, xmm1
+            jb $+0xA // ->
+            addss xmm0, [UIHorOffset]
+            // <-
+            xorps xmm14, xmm14
+            xorps xmm15, xmm15
+            subss xmm1, xmm0                        // Original code
+            movd xmm0, ecx                          // Original code
+            cvtdq2ps xmm0, xmm0                     // Original code
+            movss[rbx], xmm1                        // Original code
+            jmp[BattleCursorReturnJMP]
 
         cursorVert:
             subss xmm1, xmm0                        // Original code
             movd xmm0, ecx                          // Original code
             cvtdq2ps xmm0, xmm0                     // Original code
-            movss xmm0, [UIVertOffset]
+            movd xmm15, [iCustomResX]
+            cvtdq2ps xmm15, xmm15
+            divss xmm15, [fTwo]
+            addss xmm15, [fPosOffset]
+            movd xmm14, [iCustomResX]
+            cvtdq2ps xmm14, xmm14
+            divss xmm14, [fTwo]
+            subss xmm14, [fPosOffset]
+            comiss xmm15, xmm1
+            jb $ + 0x8 // ->
+            comiss xmm14, xmm1
+            jb $ + 0xA // ->
+            addss xmm0, [UIVertOffset]
+            // <-
             movss[rbx], xmm1                        // Original code
             jmp[BattleCursorReturnJMP]
     }
@@ -304,27 +367,6 @@ void __declspec(naked) HUDMap_CC()
             movss xmm0, [UIHeight]
             movss[rbx], xmm1                        // Original code
             jmp[HUDMapReturnJMP]
-    }
-}
-
-// HUDBlackBars Hook
-DWORD64 HUDBlackBarsReturnJMP;
-void __declspec(naked) HUDBlackBars_CC()
-{
-    __asm
-    {
-        divss xmm2, xmm0                        // Original code
-        movaps xmm1, xmm2                       // Original code
-        mulss xmm2, [rbx + 0x04]                // Original code
-        mulss xmm1, [rbx]                       // Original code
-        cmp rcx, 264
-        je disableBlackBars
-        jmp[HUDBlackBarsReturnJMP]
-
-        disableBlackBars:
-            xorps xmm1, xmm1
-            xorps xmm2, xmm2
-            jmp[HUDBlackBarsReturnJMP]
     }
 }
 
@@ -636,26 +678,6 @@ void HUDFix()
             else if (!HUDTooltipsScanResult)
             {
                 LOG_F(INFO, "HUD Tooltips: Pattern scan failed.");
-            }
-        }
-
-        // Fix HUD black bars with tooltip fix
-        if (bHUDCenter)
-        {
-            uint8_t* HUDBlackBarsScanResult = Memory::PatternScan(baseModule, "F3 0F ?? ?? 0F 28 ?? F3 0F ?? ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? 4C 8D");
-            if (HUDBlackBarsScanResult)
-            {
-                DWORD64 HUDBlackBarsAddress = (uintptr_t)HUDBlackBarsScanResult;
-                int HUDBlackBarsHookLength = Memory::GetHookLength((char*)HUDBlackBarsAddress, 15);
-                HUDBlackBarsReturnJMP = HUDBlackBarsAddress + HUDBlackBarsHookLength;
-                Memory::DetourFunction64((void*)HUDBlackBarsAddress, HUDBlackBars_CC, HUDBlackBarsHookLength);
-
-                LOG_F(INFO, "HUD Black bars: Hook length is %d bytes", HUDBlackBarsHookLength);
-                LOG_F(INFO, "HUD Black bars: Hook address is 0x%" PRIxPTR, (uintptr_t)HUDBlackBarsAddress);
-            }
-            else if (!HUDBlackBarsScanResult)
-            {
-                LOG_F(INFO, "HUD Black bars: Pattern scan failed.");
             }
         }
 
