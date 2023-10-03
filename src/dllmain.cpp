@@ -768,10 +768,10 @@ void UncapFPS()
 {
     if (bUncapFPS)
     {
-        uint8_t* UncapFPSScanResult = Memory::PatternScan(baseModule, "8B ?? ?? ?? 48 ?? ?? 40 ?? ?? ?? 48 ?? ?? 48 ?? ?? ?? E8 ?? ?? ?? ?? 48 ?? ?? ?? ?? 48 ?? ?? ?? 5F C3 CC EC");
+        uint8_t* UncapFPSScanResult = Memory::PatternScan(baseModule, "C3 1D 43 00 48 8B 43 20 8B 4C 24 38 48 85 C0");
         if (UncapFPSScanResult)
         {
-            DWORD64 UncapFPSAddress = (uintptr_t)UncapFPSScanResult;
+            DWORD64 UncapFPSAddress = (uintptr_t)UncapFPSScanResult + 0x8;
             int UncapFPSHookLength = Memory::GetHookLength((char*)UncapFPSAddress, 13);
             UncapFPSReturnJMP = UncapFPSAddress + UncapFPSHookLength;
             Memory::DetourFunction64((void*)UncapFPSAddress, UncapFPS_CC, UncapFPSHookLength);
