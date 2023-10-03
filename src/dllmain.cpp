@@ -701,13 +701,14 @@ void HUDFix()
             }
         }
 
+
         // Create marker in event background fade object
         if (bHUDCenter)
         {
-            uint8_t* EventBGFadeOutScanResult = Memory::PatternScan(baseModule, "E9 ?? ?? ?? ?? 6D CB 85 C7");
+            uint8_t* EventBGFadeOutScanResult = Memory::PatternScan(baseModule, "07 48 83 C4 20 5F C3 CC 48 89 5C 24 08 55");
             if (EventBGFadeOutScanResult)
             {
-                DWORD64 EventBGFadeOutAddress = Memory::GetAbsolute((uintptr_t)EventBGFadeOutScanResult + 0x1);
+                DWORD64 EventBGFadeOutAddress = (uintptr_t)EventBGFadeOutScanResult + 0x8;
                 int EventBGFadeOutHookLength = Memory::GetHookLength((char*)EventBGFadeOutAddress, 13);
                 EventBGFadeOutReturnJMP = EventBGFadeOutAddress + EventBGFadeOutHookLength;
                 Memory::DetourFunction64((void*)EventBGFadeOutAddress, EventBGFadeOut_CC, EventBGFadeOutHookLength);
@@ -724,10 +725,10 @@ void HUDFix()
         // Create marker in battle wipe object
         if (bHUDCenter)
         {
-            uint8_t* BattleWipeScanResult = Memory::PatternScan(baseModule, "E9 ?? ?? ?? ?? 95 66 1D");
+            uint8_t* BattleWipeScanResult = Memory::PatternScan(baseModule, "C2 02 00 00 41 88 00 C3 48 8B 42 20 45 33 C9");
             if (BattleWipeScanResult)
             {
-                DWORD64 BattleWipeAddress = Memory::GetAbsolute((uintptr_t)BattleWipeScanResult + 0x1);
+                DWORD64 BattleWipeAddress = (uintptr_t)BattleWipeScanResult + 0x8;
                 int BattleWipeHookLength = Memory::GetHookLength((char*)BattleWipeAddress, 13);
                 BattleWipeReturnJMP = BattleWipeAddress + BattleWipeHookLength;
                 Memory::DetourFunction64((void*)BattleWipeAddress, BattleWipe_CC, BattleWipeHookLength);
@@ -767,10 +768,10 @@ void UncapFPS()
 {
     if (bUncapFPS)
     {
-        uint8_t* UncapFPSScanResult = Memory::PatternScan(baseModule, "8B ?? ?? ?? 48 ?? ?? 40 ?? ?? ?? 48 ?? ?? 48 ?? ?? ?? E8 ?? ?? ?? ?? 48 ?? ?? ?? ?? 48 ?? ?? ?? 5F C3 CC EC");
+        uint8_t* UncapFPSScanResult = Memory::PatternScan(baseModule, "C3 1D 43 00 48 8B 43 20 8B 4C 24 38 48 85 C0");
         if (UncapFPSScanResult)
         {
-            DWORD64 UncapFPSAddress = (uintptr_t)UncapFPSScanResult;
+            DWORD64 UncapFPSAddress = (uintptr_t)UncapFPSScanResult + 0x8;
             int UncapFPSHookLength = Memory::GetHookLength((char*)UncapFPSAddress, 13);
             UncapFPSReturnJMP = UncapFPSAddress + UncapFPSHookLength;
             Memory::DetourFunction64((void*)UncapFPSAddress, UncapFPS_CC, UncapFPSHookLength);
