@@ -12,18 +12,21 @@ This is a fix for ultrawide/narrower displays in Octopath Traveler 2.
 
 ## Installation
 - Grab the latest release of Octopath2Fix from [here.](https://github.com/Lyall/Octopath2Fix/releases)
-- Extract the contents of the release zip in to the game directory.<br />(e.g. "**steamapps\common\Octopath_Traveler2**" for Steam).
+- Extract the contents of the release zip in to the the game folder. e.g. ("**steamapps\common\Octopath_Traveler2**" for Steam).
+
+### Steam Deck/Linux Additional Instructions
+🚩**You do not need to do this if you are using Windows!**
+- Open up the game properties in Steam and add `WINEDLLOVERRIDES="d3d11=n,b" %command%` to the launch options.
 
 ## Configuration
 - See **Octopath2Fix.ini** to adjust settings for the fix.
 
-## Linux/Steam Deck
-- Make sure you set the Steam launch options to `WINEDLLOVERRIDES="d3d11.dll=n,b" %command%`
-<img src="https://user-images.githubusercontent.com/695941/226513105-e2aedf8f-d596-4ffb-a121-ac020d9e867f.jpg" width="646" height="113" />
-
 ## Known Issues
-Please report any issues you see. (**Check the known issues list first!**)
+Please report any issues you see.
+This list will contain bugs which may or may not be fixed.
+
 - "Porthole" view through buildings is offset. (Thanks THE-GaYmer for pointing this out!)
+- In battle, cursors and damage numbers may be somewhat offset.
 
 ## Screenshots
 
@@ -32,8 +35,7 @@ Please report any issues you see. (**Check the known issues list first!**)
 | Disabled pillarboxing. |
 
 ## Credits
-[Flawless Widescreen](https://www.flawlesswidescreen.org/) for the LOD fix.<br />
 [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) for ASI loading. <br />
-[inipp](https://github.com/mcmtroffaes/inipp) for ini parsing. <br />
-[Loguru](https://github.com/emilk/loguru) for logging. <br />
-[length-disassembler](https://github.com/Nomade040/length-disassembler) for length disassembly.
+[inipp](https://github.com/mcmtroffaes/inipp) for ini reading. <br />
+[spdlog](https://github.com/gabime/spdlog) for logging. <br />
+[safetyhook](https://github.com/cursey/safetyhook) for hooking.
