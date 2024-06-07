@@ -6,7 +6,11 @@ on:
       version:
         description: 'Release version number'
         required: true
-        
+
+defaults:
+  run:
+    shell: pwsh
+
 jobs:
   build:
     runs-on: windows-latest
@@ -28,17 +32,49 @@ jobs:
         repository: "ThirteenAG/Ultimate-ASI-Loader"
         latest: true
         fileName: "Ultimate-ASI-Loader_x64.zip"
-    - run: unzip Ultimate-ASI-Loader_x64.zip -d .\; C:\msys64\usr\bin\wget.exe -O .\UltimateASILoader_LICENSE.md https://raw.githubusercontent.com/ThirteenAG/Ultimate-ASI-Loader/master/license
-    - run: mkdir .\zip
-    - run: cp ${{ github.event.repository.name }}.asi .\zip\; cp ${{ github.event.repository.name }}.ini .\zip\
-    - run: cp dinput8.dll .\zip\version.dll
-    - run: cp UltimateASILoader_LICENSE.md .\zip\
-    - run: New-Item -Path ".\zip\EXTRACT_TO_GAME_FOLDER" -ItemType File
-    - run: cd .\zip\; 7z a -r -tzip ..\${{ github.event.repository.name }}_${{ github.event.inputs.version }}.zip .\*
-    
+
+    - name: Prepare Ultimate ASI Loader
+      run: |
+        unzip Ultimate-ASI-Loader_x64.zip -d .\
+        C:\msys64\usr\bin\wget.exe -O .\UltimateASILoader_LICENSE.md https://raw.githubusercontent.com/ThirteenAG/Ultimate-ASI-Loader/master/license
+        
+    - name: Create Directory Structure
+      run: |
+        mkdir .\zip\Gamepass\Octopath_Traveler2\Binaries\WinGDK
+        mkdir .\zip\Steam\Octopath_Traveler2\Binaries\Win64
+        mkdir .\zip\Reloaded-II
+
+    # Xbox
+    - name: Prepare Xbox Files
+      run: |
+        cp ${{ github.event.repository.name }}.asi .\zip\Gamepass\Octopath_Traveler2\Binaries\WinGDK\
+        cp ${{ github.event.repository.name }}.ini .\zip\Gamepass\Octopath_Traveler2\Binaries\WinGDK\
+        cp dinput8.dll .\zip\Gamepass\Octopath_Traveler2\Binaries\WinGDK\dsound.dll
+        cp UltimateASILoader_LICENSE.md .\zip\Gamepass\Octopath_Traveler2\Binaries\WinGDK\
+        New-Item -Path ".\zip\Gamepass\EXTRACT_TO_GAME_FOLDER" -ItemType File
+        
+    - name: Create Xbox Zip
+      run: |
+        cd .\zip\Gamepass
+        7z a -r -tzip ..\..\${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Xbox.zip .\*
+
+    # Steam
+    - name: Prepare Steam Files
+      run: |
+        cp ${{ github.event.repository.name }}.asi .\zip\Steam\Octopath_Traveler2\Binaries\Win64\
+        cp ${{ github.event.repository.name }}.ini .\zip\Steam\Octopath_Traveler2\Binaries\Win64\
+        cp dinput8.dll .\zip\Steam\Octopath_Traveler2\Binaries\Win64\dsound.dll
+        cp UltimateASILoader_LICENSE.md .\zip\Steam\Octopath_Traveler2\Binaries\Win64\
+        New-Item -Path ".\zip\Steam\EXTRACT_TO_GAME_FOLDER" -ItemType File
+        
+    - name: Create Steam Zip
+      run: |
+        cd .\zip\Steam
+        7z a -r -tzip ..\..\${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Steam.zip .\*
+          
     - uses: ncipollo/release-action@v1
       with:
-        artifacts: "${{ github.event.repository.name }}_${{ github.event.inputs.version }}.zip"
+        artifacts: "${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Steam.zip, ${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Xbox.zip, ${{ github.event.repository.name }}_Reloaded-II.zip"
         token: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ github.event.inputs.version }}
         name: "${{ github.event.inputs.version }}"
