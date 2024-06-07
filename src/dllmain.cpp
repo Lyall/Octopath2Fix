@@ -123,8 +123,27 @@ void ReadConfig()
     spdlog::info("Config Parse: bUncapFPS: {}", bUncapFPS);
     spdlog::info("----------");
 
-    // Grab desktop resolution
+    // Grab desktop resolution/aspect
     DesktopDimensions = Util::GetPhysicalDesktopDimensions();
+    iCurrentResX = DesktopDimensions.first;
+    iCurrentResY = DesktopDimensions.second;
+
+    // Calculate aspect ratio
+    fAspectRatio = (float)iCurrentResX / (float)iCurrentResY;
+    fAspectMultiplier = fAspectRatio / fNativeAspect;
+
+    // HUD variables
+    fHUDWidth = iCurrentResY * fNativeAspect;
+    fHUDHeight = (float)iCurrentResY;
+    fHUDWidthOffset = (float)(iCurrentResX - fHUDWidth) / 2;
+    fHUDHeightOffset = 0;
+    if (fAspectRatio < fNativeAspect)
+    {
+        fHUDWidth = (float)iCurrentResX;
+        fHUDHeight = (float)iCurrentResX / fNativeAspect;
+        fHUDWidthOffset = 0;
+        fHUDHeightOffset = (float)(iCurrentResY - fHUDHeight) / 2;
+    }
 }
 
 void IntroSkip()
@@ -163,7 +182,7 @@ void IntroSkip()
 void CurrentResolution()
 {
     // Get current resolution
-    uint8_t* CurrResolutionScanResult = Memory::PatternScan(baseModule, "39 ?? ?? ?? ?? ?? 75 ?? 48 ?? ?? 48 ?? ?? ?? 39 ?? ?? ?? ?? ?? 74 ??");
+    uint8_t* CurrResolutionScanResult = Memory::PatternScan(baseModule, "F2 0F ?? ?? ?? ?? ?? ?? C6 ?? ?? ?? ?? ?? 01 48 ?? ?? ?? 5F C3");
     if (CurrResolutionScanResult)
     {
         spdlog::info("Current Resolution: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)CurrResolutionScanResult - (uintptr_t)baseModule);
@@ -173,8 +192,8 @@ void CurrentResolution()
             [](SafetyHookContext& ctx)
             {
                 // Get ResX and ResY
-                iCurrentResX = (int)ctx.rdx & 0xFFFFFFFF;
-                iCurrentResY = (int)static_cast<uint32_t>(ctx.rdx >> 32);
+                iCurrentResX = (int)ctx.xmm0.f32[0];
+                iCurrentResY = (int)ctx.xmm0.f32[1];
 
                 // Calculate aspect ratio
                 fAspectRatio = (float)iCurrentResX / (float)iCurrentResY;
