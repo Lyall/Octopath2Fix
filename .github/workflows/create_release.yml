@@ -74,7 +74,7 @@ jobs:
           
     - uses: ncipollo/release-action@v1
       with:
-        artifacts: "${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Steam.zip, ${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Xbox.zip, ${{ github.event.repository.name }}_Reloaded-II.zip"
+        artifacts: "${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Steam.zip, ${{ github.event.repository.name }}_${{ github.event.inputs.version }}_Xbox.zip"
         token: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ github.event.inputs.version }}
         name: "${{ github.event.inputs.version }}"
