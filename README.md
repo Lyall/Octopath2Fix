@@ -26,7 +26,7 @@ This is a fix for ultrawide/narrower displays in Octopath Traveler 2.
 Please report any issues you see.
 This list will contain bugs which may or may not be fixed.
 
-- "Porthole" view through buildings is display at at the wrong aspect ratio.
+- "Porthole" view through buildings is displayed at at the wrong aspect ratio.
 
 ## Screenshots
 | ![ezgif-1-adaa3f0c3c](https://user-images.githubusercontent.com/695941/226225010-073a0360-98bb-4e88-bfef-bcdf3f74abae.gif) |
