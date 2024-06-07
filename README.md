@@ -9,6 +9,7 @@ This is a fix for ultrawide/narrower displays in Octopath Traveler 2.
 - Corrects FOV at ultrawide or non 16:9 resolutions.
 - 16:9 centered HUD with fixed UI elements.
 - 120 FPS cap removal.
+- Intro skip.
 
 ## Installation
 - Grab the latest release of Octopath2Fix from [here.](https://github.com/Lyall/Octopath2Fix/releases)
@@ -16,7 +17,7 @@ This is a fix for ultrawide/narrower displays in Octopath Traveler 2.
 
 ### Steam Deck/Linux Additional Instructions
 🚩**You do not need to do this if you are using Windows!**
-- Open up the game properties in Steam and add `WINEDLLOVERRIDES="d3d11=n,b" %command%` to the launch options.
+- Open up the game properties in Steam and add `WINEDLLOVERRIDES="dsound=n,b" %command%` to the launch options.
 
 ## Configuration
 - See **Octopath2Fix.ini** to adjust settings for the fix.
@@ -25,8 +26,7 @@ This is a fix for ultrawide/narrower displays in Octopath Traveler 2.
 Please report any issues you see.
 This list will contain bugs which may or may not be fixed.
 
-- "Porthole" view through buildings is offset. (Thanks THE-GaYmer for pointing this out!)
-- In battle, cursors and damage numbers may be somewhat offset.
+- "Porthole" view through buildings is display at at the wrong aspect ratio.
 
 ## Screenshots
 
