@@ -24,6 +24,7 @@ std::pair DesktopDimensions = { 0,0 };
 bool bFixAspect;
 bool bFixHUD;
 bool bFixFOV;
+bool bIntroSkip;
 bool bUncapFPS;
 
 // Aspect ratio + HUD stuff
@@ -111,17 +112,52 @@ void ReadConfig()
     inipp::get_value(ini.sections["Fix Aspect Ratio"], "Enabled", bFixAspect);
     inipp::get_value(ini.sections["Fix HUD"], "Enabled", bFixHUD);
     inipp::get_value(ini.sections["Fix FOV"], "Enabled", bFixFOV);
+    inipp::get_value(ini.sections["Intro Skip"], "Enabled", bIntroSkip);
     inipp::get_value(ini.sections["Uncap FPS"], "Enabled", bUncapFPS);
 
     // Log config parse
     spdlog::info("Config Parse: bFixAspect: {}", bFixAspect);
     spdlog::info("Config Parse: bFixHUD: {}", bFixHUD);
     spdlog::info("Config Parse: bFixFOV: {}", bFixFOV);
+    spdlog::info("Config Parse: bIntroSkip: {}", bIntroSkip);
     spdlog::info("Config Parse: bUncapFPS: {}", bUncapFPS);
     spdlog::info("----------");
 
     // Grab desktop resolution
     DesktopDimensions = Util::GetPhysicalDesktopDimensions();
+}
+
+void IntroSkip()
+{
+    if (bIntroSkip)
+    {
+        // Intro Skip
+        uint8_t* IntroSkipScanResult = Memory::PatternScan(baseModule, "0F ?? ?? ?? ?? 48 ?? ?? ?? 48 ?? ?? ?? ?? 88 ?? C1 ?? ?? ?? 48 ?? ?? ?? 5F C3") + 0x5;
+        if (IntroSkipScanResult)
+        {
+            spdlog::info("Intro Skip: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)IntroSkipScanResult - (uintptr_t)baseModule);
+
+            static bool bHasSkippedIntro = false;
+
+            static SafetyHookMid IntroSkipMidHook{};
+            IntroSkipMidHook = safetyhook::create_mid(IntroSkipScanResult,
+                [](SafetyHookContext& ctx)
+                {
+                    // ctx.rax = 0 = EUITitleFlow::eLogo
+                    // Double check for bHasSkippedIntro and title flow state just in-case
+                    if (ctx.rdi && !bHasSkippedIntro && ctx.rax == 0)
+                    {
+                        // EndTitle
+                        *reinterpret_cast<BYTE*>(ctx.rdi + 0x2F8) = 1;
+                        bHasSkippedIntro = true;
+                    }
+                });
+        }
+        else if (!IntroSkipScanResult)
+        {
+            spdlog::error("Intro Skip: Pattern scan failed.");
+        }
+    }
 }
 
 void CurrentResolution()
@@ -337,14 +373,14 @@ void HUD()
             spdlog::error("HUD: WorldMap: Pattern scan failed.");
         }
 
-        // FadeInit
-        uint8_t* FadeInitScanResult = Memory::PatternScan(baseModule, "48 ?? ?? ?? ?? 48 ?? ?? ?? ?? 56 57 41 ?? 48 ?? ?? ?? 33 ?? 48 ?? ?? 4D ?? ?? 48 ?? ?? 48 ?? ?? 48 ?? ?? ?? 48 ?? ?? ?? 74 ?? 48 ?? ?? ?? 4C ?? ?? ?? ?? E8 ?? ?? ?? ?? EB ??"); // Bad sig, 3 results
-        if (FadeInitScanResult)
+        // KSFade::FadeInit
+        uint8_t* KSFadeScanResult = Memory::PatternScan(baseModule, "48 ?? ?? 48 ?? ?? 0F ?? ?? ?? ?? 33 ?? 0F ?? ?? 48 ?? ?? FF ?? ?? ?? ?? ?? 0F ?? ?? 0F ?? ?? ?? ?? ?? ??");
+        if (KSFadeScanResult)
         {
-            spdlog::info("HUD: FadeInit: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)FadeInitScanResult - (uintptr_t)baseModule);
+            spdlog::info("HUD: KSFade: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)KSFadeScanResult - (uintptr_t)baseModule);
 
-            static SafetyHookMid FadeInitMidHook{};
-            FadeInitMidHook = safetyhook::create_mid(FadeInitScanResult,
+            static SafetyHookMid KSFadeMidHook{};
+            KSFadeMidHook = safetyhook::create_mid(KSFadeScanResult,
                 [](SafetyHookContext& ctx)
                 {
                     if (ctx.rcx + 0x190)
@@ -354,9 +390,53 @@ void HUD()
                      }
                 });
         }
-        else if (!WorldMapScanResult)
+        else if (!KSFadeScanResult)
         {
-            spdlog::error("HUD: FadeInit: Pattern scan failed.");
+            spdlog::error("HUD: KSFade: Pattern scan failed.");
+        }
+
+        // UIEventBackgroundFadeBase::StartFadeOut
+        uint8_t* EventBackgroundFadeScanResult = Memory::PatternScan(baseModule, "48 ?? ?? 48 ?? ?? ?? 04 F3 0F ?? ?? ?? ?? ?? ?? 49 ?? ?? C7 ?? ?? ?? ?? ?? 00 00 00 00");
+        if (EventBackgroundFadeScanResult)
+        {
+            spdlog::info("HUD: EventBackgroundFade: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)EventBackgroundFadeScanResult - (uintptr_t)baseModule);
+
+            static SafetyHookMid EventBackgroundFadeMidHook{};
+            EventBackgroundFadeMidHook = safetyhook::create_mid(EventBackgroundFadeScanResult,
+                [](SafetyHookContext& ctx)
+                {
+                    if (ctx.rcx + 0x190)
+                    {
+                        // Set marker in Padding.Left
+                        *reinterpret_cast<float*>(ctx.rcx + 0x190) = 12345.00f;
+                    }
+                });
+        }
+        else if (!EventBackgroundFadeScanResult)
+        {
+            spdlog::error("HUD: EventBackgroundFade: Pattern scan failed.");
+        }
+
+        // Battle Wipes
+        uint8_t* BattleWipeScanResult = Memory::PatternScan(baseModule, "4C ?? ?? 4C ?? ?? ?? 0F ?? ?? C1 02 ?? ?? 41 ?? ?? C3"); // Bad pattern that includes offset.
+        if (BattleWipeScanResult)
+        {
+            spdlog::info("HUD: BattleWipe: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)BattleWipeScanResult - (uintptr_t)baseModule);
+
+            static SafetyHookMid BattleWipeMidHook{};
+            BattleWipeMidHook = safetyhook::create_mid(BattleWipeScanResult,
+                [](SafetyHookContext& ctx)
+                {
+                    if (ctx.rcx + 0x190)
+                    {
+                        // Set marker in Padding.Left
+                        *reinterpret_cast<float*>(ctx.rcx + 0x190) = 12345.00f;
+                    }
+                });
+        }
+        else if (!BattleWipeScanResult)
+        {
+            spdlog::error("HUD: BattleWipe: Pattern scan failed.");
         }
 
         /*
@@ -410,6 +490,7 @@ DWORD __stdcall Main(void*)
 {
     Logging();
     ReadConfig();
+    IntroSkip();
     CurrentResolution();
     AspectFOV();
     HUD();
