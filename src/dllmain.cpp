@@ -111,11 +111,13 @@ void ReadConfig()
     inipp::get_value(ini.sections["Fix Aspect Ratio"], "Enabled", bFixAspect);
     inipp::get_value(ini.sections["Fix HUD"], "Enabled", bFixHUD);
     inipp::get_value(ini.sections["Fix FOV"], "Enabled", bFixFOV);
+    inipp::get_value(ini.sections["Uncap FPS"], "Enabled", bUncapFPS);
 
     // Log config parse
     spdlog::info("Config Parse: bFixAspect: {}", bFixAspect);
     spdlog::info("Config Parse: bFixHUD: {}", bFixHUD);
     spdlog::info("Config Parse: bFixFOV: {}", bFixFOV);
+    spdlog::info("Config Parse: bUncapFPS: {}", bUncapFPS);
     spdlog::info("----------");
 
     // Grab desktop resolution
@@ -218,12 +220,13 @@ void HUD()
         uint8_t* HUDPositionScanResult = Memory::PatternScan(baseModule, "FF ?? 48 ?? ?? ?? ?? 0F ?? ?? 48 ?? ?? 0F ?? ?? 48 ?? ?? ?? 5F C3") + 0xA;
         if (HUDPositionScanResult)
         {
-            spdlog::info("HUD: HUDPosition: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)HUDPositionScanResult - (uintptr_t)baseModule);
+            spdlog::info("HUD: HUD Position: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)HUDPositionScanResult - (uintptr_t)baseModule);
 
             static SafetyHookMid HUDPositionMidHook{};
             HUDPositionMidHook = safetyhook::create_mid(HUDPositionScanResult,
                 [](SafetyHookContext& ctx)
                 {
+                    // Check for left padding marker and don't center the UI element.
                     if (ctx.rcx + 0x190)
                     {
                         if (*reinterpret_cast<float*>(ctx.rcx + 0x190) == 12345.00f)
@@ -241,19 +244,17 @@ void HUD()
                     {
                         ctx.xmm0.f32[1] = (float)fHUDHeightOffset / iCurrentResY;
                         ctx.xmm0.f32[3] = 1.00f - ctx.xmm0.f32[1];
-                    }
-
-              
+                    }              
                 });
         }
         else if (!HUDPositionScanResult)
         {
-            spdlog::error("HUD: HUDPosition: Pattern scan failed.");
+            spdlog::error("HUD: HUD Position: Pattern scan failed.");
         }
 
         // Fix offset markers (i.e map icons etc)
         uint8_t* MarkersScanResult = Memory::PatternScan(baseModule, "0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? 4C") + 0xA;
-        if (!MarkersScanResult)
+        if (MarkersScanResult)
         {
             spdlog::info("HUD: Markers: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)MarkersScanResult - (uintptr_t)baseModule);
 
@@ -278,7 +279,7 @@ void HUD()
 
         // Fix offset tooltips
         uint8_t* TooltipsScanResult = Memory::PatternScan(baseModule, "48 ?? ?? 20 0F ?? ?? 66 0F ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? 40 ?? ??") + 0xE;
-        if (!TooltipsScanResult)
+        if (TooltipsScanResult)
         {
             spdlog::info("HUD: Tooltips: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)TooltipsScanResult - (uintptr_t)baseModule);
 
@@ -313,7 +314,7 @@ void HUD()
 
         // Fix world map scrolling
         uint8_t* WorldMapScanResult = Memory::PatternScan(baseModule, "0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? E8 ?? ?? ?? ?? F3 0F ?? ?? ?? ?? ?? ?? F3 0F ?? ??") + 0xA;
-        if (!WorldMapScanResult)
+        if (WorldMapScanResult)
         {
             spdlog::info("HUD: WorldMap: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)WorldMapScanResult - (uintptr_t)baseModule);
 
@@ -338,7 +339,7 @@ void HUD()
 
         // FadeInit
         uint8_t* FadeInitScanResult = Memory::PatternScan(baseModule, "48 ?? ?? ?? ?? 48 ?? ?? ?? ?? 56 57 41 ?? 48 ?? ?? ?? 33 ?? 48 ?? ?? 4D ?? ?? 48 ?? ?? 48 ?? ?? 48 ?? ?? ?? 48 ?? ?? ?? 74 ?? 48 ?? ?? ?? 4C ?? ?? ?? ?? E8 ?? ?? ?? ?? EB ??"); // Bad sig, 3 results
-        if (!FadeInitScanResult)
+        if (FadeInitScanResult)
         {
             spdlog::info("HUD: FadeInit: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)FadeInitScanResult - (uintptr_t)baseModule);
 
@@ -386,6 +387,25 @@ void HUD()
     } 
 }
 
+void FPSCap()
+{
+    if (bUncapFPS)
+    {
+        // Uncap FPS
+        uint8_t* FPSCapScanResult = Memory::PatternScan(baseModule, "73 ?? 80 ?? ?? ?? ?? ?? 00 74 ?? FF ?? ?? ?? ?? ?? 3B ?? ?? ?? ?? ??");
+        if (FPSCapScanResult)
+        {
+            spdlog::info("FPS Cap: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)FPSCapScanResult - (uintptr_t)baseModule);
+            Memory::Write((uintptr_t)FPSCapScanResult, (BYTE)0xEB); // No cap fr fr
+            spdlog::info("FPS Cap: Patched instruction.");
+        }
+        else if (!FPSCapScanResult)
+        {
+            spdlog::error("FPS Cap: Pattern scan failed.");
+        }
+    }
+}
+
 DWORD __stdcall Main(void*)
 {
     Logging();
@@ -393,6 +413,7 @@ DWORD __stdcall Main(void*)
     CurrentResolution();
     AspectFOV();
     HUD();
+    FPSCap();
     return true; //end thread
 }
 
