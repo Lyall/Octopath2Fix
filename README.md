@@ -5,11 +5,11 @@
 This is a fix for ultrawide/narrower displays in Octopath Traveler 2.
 
 ## Features
-- Removes pillarboxing at ultrawide or non 16:9 resolutions.
-- Corrects FOV at ultrawide or non 16:9 resolutions.
-- 16:9 centered HUD with fixed UI elements.
-- 120 FPS cap removal.
-- Intro skip.
+- Remove pillarboxing/letterboxing.
+- Correct FOV at any resolution.
+- 16:9 centered HUD.
+- Disable 120FPS framerate cap.
+- Intro logo skip.
 
 ## Installation
 - Grab the latest release of Octopath2Fix from [here.](https://github.com/Lyall/Octopath2Fix/releases)
