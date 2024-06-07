@@ -262,32 +262,35 @@ void HUD()
             HUDPositionMidHook = safetyhook::create_mid(HUDPositionScanResult,
                 [](SafetyHookContext& ctx)
                 {
-                    // Check for left padding marker and don't center the UI element.
-                    if (ctx.rcx + 0x190)
+                    if (ctx.xmm0.f32[0] == 0.00f && ctx.xmm0.f32[1] == 0.00f && ctx.xmm0.f32[2] == 1.00f && ctx.xmm0.f32[3] == 1.00f)
                     {
-                        if (*reinterpret_cast<float*>(ctx.rcx + 0x190) == 12345.00f)
+                        // Check for left padding marker and don't center the UI element.
+                        if (ctx.rcx + 0x190)
                         {
-                            return;
+                            if (*reinterpret_cast<float*>(ctx.rcx + 0x190) == 12345.00f)
+                            {
+                                return;
+                            }
+                        }
+
+                        if (fAspectRatio > fNativeAspect)
+                        {
+                            ctx.xmm0.f32[0] = (float)fHUDWidthOffset / iCurrentResX;
+                            ctx.xmm0.f32[2] = 1.00f - ctx.xmm0.f32[0];
+                        }
+                        else if (fAspectRatio < fNativeAspect)
+                        {
+                            ctx.xmm0.f32[1] = (float)fHUDHeightOffset / iCurrentResY;
+                            ctx.xmm0.f32[3] = 1.00f - ctx.xmm0.f32[1];
                         }
                     }
-
-                    if (fAspectRatio > fNativeAspect)
-                    {
-                        ctx.xmm0.f32[0] = (float)fHUDWidthOffset / iCurrentResX;
-                        ctx.xmm0.f32[2] = 1.00f - ctx.xmm0.f32[0];
-                    }
-                    else if (fAspectRatio < fNativeAspect)
-                    {
-                        ctx.xmm0.f32[1] = (float)fHUDHeightOffset / iCurrentResY;
-                        ctx.xmm0.f32[3] = 1.00f - ctx.xmm0.f32[1];
-                    }              
                 });
         }
         else if (!HUDPositionScanResult)
         {
             spdlog::error("HUD: HUD Position: Pattern scan failed.");
         }
-
+        
         // Fix offset markers (i.e map icons etc)
         uint8_t* MarkersScanResult = Memory::PatternScan(baseModule, "0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? 4C") + 0xA;
         if (MarkersScanResult)
@@ -438,32 +441,6 @@ void HUD()
         {
             spdlog::error("HUD: BattleWipe: Pattern scan failed.");
         }
-
-        /*
-        uint8_t* BattleCursorScanResult = Memory::PatternScan(baseModule, "0F ?? ?? 66 ?? ?? ?? 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? ?? F3 0F ?? ?? 4C") + 0xA;
-        if (BattleCursorScanResult)
-        {
-            spdlog::info("HUD: BattleCursor: Address is {:s}+{:x}", sExeName.c_str(), (uintptr_t)BattleCursorScanResult - (uintptr_t)baseModule);
-
-            static SafetyHookMid BattleCursorMidHook{};
-            BattleCursorMidHook = safetyhook::create_mid(BattleCursorScanResult,
-                [](SafetyHookContext& ctx)
-                {
-                    if (fAspectRatio > fNativeAspect)
-                    {
-                        ctx.xmm0.f32[0] = fHUDWidthOffset;
-                    }
-                    else if (fAspectRatio < fNativeAspect)
-                    {
-                        ctx.xmm1.f32[0] = fHUDHeightOffset;
-                    }
-                });
-        }
-        else if (!BattleCursorScanResult)
-        {
-            spdlog::error("HUD: BattleCursor: Pattern scan failed.");
-        }
-        */
     } 
 }
 
